@@ -199,11 +199,11 @@ def build_gate(level: int) -> MeshBuilder:
         m.box("roof_dark", (6.4, 2.5, 12.8), (2.5, 0.18, 2.5))
         m.block_box(6.4, 12.8, 2.5, 2.5)
     else:
-        m.box_on_ground("office", 7.0, 12.4, (3.0, 2.8, 2.6))
-        m.box_on_ground("glass", 7.0, 13.72, (2.4, 1.0, 0.04), y0=1.2)
-        m.box("roof_dark", (7.0, 2.9, 12.4), (3.6, 0.2, 3.2))
-        m.box("accent", (7.0, 2.62, 13.73), (3.0, 0.22, 0.04))
-        m.block_box(7.0, 12.4, 3.6, 3.2)
+        m.box_on_ground("office", 7.0, 12.75, (3.0, 2.8, 2.6))
+        m.box_on_ground("glass", 7.0, 14.07, (2.4, 1.0, 0.04), y0=1.2)
+        m.box("roof_dark", (7.0, 2.9, 12.75), (3.6, 0.2, 3.2))
+        m.box("accent", (7.0, 2.62, 14.08), (3.0, 0.22, 0.04))
+        m.block_box(7.0, 12.75, 3.6, 3.2)
         for x in (-px, px):                                 # lampu lalu lintas
             m.box("frame", (x, 2.95, GATE_Z), (0.3, 0.6, 0.3))
             m.box("light_green", (x, 3.1, GATE_Z + 0.16), (0.16, 0.14, 0.02))
@@ -302,7 +302,7 @@ def build_office(level: int) -> MeshBuilder:
     """Kantor di utara jalur utama (z 9.7..14.7), tidak menutupi jalan."""
     m = MeshBuilder()
     ox, oz, ow, od = -14.0, 12.2, 8.0, 5.0
-    floors = 1 if level == 1 else 2
+    floors = level                                           # 1, 2, 3 lantai pada tapak yang sama
     oh = 3.6 * floors
     front = oz - od / 2
     m.box_on_ground("wall_base", ox, oz, (ow + 0.1, 0.4, od + 0.1))
@@ -314,15 +314,23 @@ def build_office(level: int) -> MeshBuilder:
         m.box_on_ground("glass", ox - 1.0, front - 0.03, (4.6, 1.3, 0.05), y0=y0)
         for dx in (-3.3, -1.0, 1.3):
             m.box_on_ground("frame", ox + dx, front - 0.05, (0.08, 1.3, 0.06), y0=y0)
+        if f > 0:                                             # list lantai + unit AC
+            m.box("wall_base", (ox, f * 3.6, front - 0.04), (ow, 0.18, 0.08))
+            m.box_on_ground("ac_unit", ox + 3.2, front - 0.25, (0.8, 0.55, 0.4), y0=y0 + 0.2)
     m.box_on_ground("frame", ox + 2.6, front - 0.03, (1.0, 2.2, 0.06))
+    m.box("roof_dark", (ox + 2.6, 2.45, front - 0.6), (1.6, 0.12, 1.2))                    # kanopi pintu
     m.box_on_ground("door", ox + 2.0, oz + 0.8, (1.2, 0.7, 0.9), y0=oh + 0.24)
     m.block(ox - ow / 2 - 0.25, oz - od / 2 - 0.25, ox + ow / 2 + 0.25, oz + od / 2 + 0.25)
-    if level == 3:                                           # sayap ruang dispatcher + tiang bendera
-        wx, wz = ox + 6.6, oz + 0.4
-        m.box_on_ground("office", wx, wz, (4.6, 3.6, 4.0))
-        m.box_on_ground("glass", wx, wz - 2.03, (3.4, 1.3, 0.05), y0=1.1)
-        m.box("roof_dark", (wx, 3.72, wz), (5.1, 0.24, 4.5))
-        m.block(wx - 2.55, wz - 2.25, wx + 2.55, wz + 2.25)
+    if level >= 2:                                            # papan nama di atap
+        m.box_on_ground("frame", ox - 1.0, oz, (4.0, 0.9, 0.12), y0=oh + 0.24)
+        m.box_on_ground("accent", ox - 1.0, oz - 0.07, (3.8, 0.7, 0.02), y0=oh + 0.34)
+    if level == 3:                                            # pagar atap, panel surya, tiang bendera
+        for s_ in (-1, 1):
+            m.box("frame", (ox, oh + 0.75, oz + s_ * (od / 2 - 0.05)), (ow, 0.06, 0.06))
+        m.solid("solar", [[(ox + 0.6, oh + 0.4, oz + 0.3), (ox + 3.6, oh + 0.4, oz + 0.3),
+                           (ox + 3.6, oh + 0.9, oz + 2.0), (ox + 0.6, oh + 0.9, oz + 2.0)],
+                          [(ox + 0.6, oh + 0.5, oz + 0.3), (ox + 3.6, oh + 0.5, oz + 0.3),
+                           (ox + 3.6, oh + 1.0, oz + 2.0), (ox + 0.6, oh + 1.0, oz + 2.0)]])
         m.cylinder("pole", (ox - 4.9, 3.5, 9.8), 0.06, 7.0, sides=6)
         m.box("gate_red", (ox - 4.3, 6.6, 9.8), (1.2, 0.4, 0.04))
         m.box("gate_white", (ox - 4.3, 6.2, 9.8), (1.2, 0.4, 0.04))
@@ -464,28 +472,28 @@ def build_props() -> MeshBuilder:
     """Dekorasi & properti depot (tetap, tidak ikut upgrade), di luar jalur kendaraan."""
     m = MeshBuilder()
     # --- area istirahat (gazebo) di timur laut
-    gx, gz = 12.0, 12.0
+    gx, gz = 12.0, 12.95                                  # di luar sapuan truk panjang dari dock
     for dx in (-1.8, 1.8):
-        for dz in (-1.6, 1.6):
+        for dz in (-1.3, 1.3):
             m.box_on_ground("wood_dark", gx + dx, gz + dz, (0.14, 2.5, 0.14))
-    m.gable_roof("tile", gx, gz, 4.6, 4.2, 2.5, 1.0)
+    m.gable_roof("tile", gx, gz, 4.6, 3.5, 2.5, 0.9)
     m.box_on_ground("wood", gx, gz, (1.8, 0.08, 0.9), y0=0.72)                                # meja
     m.box_on_ground("wood_dark", gx, gz, (0.12, 0.72, 0.12))
-    for dz in (-0.85, 0.85):
+    for dz in (-0.75, 0.75):
         m.box_on_ground("wood", gx, gz + dz, (1.8, 0.07, 0.32), y0=0.42)                      # bangku
         m.box_on_ground("wood_dark", gx, gz + dz, (1.6, 0.42, 0.08))
-    m.box_on_ground("galon", gx + 1.4, gz - 1.2, (0.3, 0.45, 0.3), y0=0.0)                   # galon minum
-    m.block(gx - 2.3, gz - 2.1, gx + 2.3, gz + 2.1)
+    m.box_on_ground("galon", gx + 1.4, gz - 1.0, (0.3, 0.45, 0.3), y0=0.0)                   # galon minum
+    m.block(gx - 2.3, gz - 1.75, gx + 2.3, gz + 1.75)
     # --- parkir motor karyawan
     for i, color in enumerate(("cab_red", "cab_blue", "chassis", "cab_red")):
-        bx, bz = 15.6 + i * 1.0, 10.7
+        bx, bz = 15.6 + i * 1.0, 11.1
         m.box_on_ground(color, bx, bz, (0.32, 0.45, 1.3), y0=0.35)
         m.box_on_ground("rubber", bx, bz - 0.15, (0.28, 0.1, 0.6), y0=0.8)
         for dz in (-0.62, 0.62):
             m.cylinder("tire", (bx, 0.3, bz + dz), 0.3, 0.1, axis="x", sides=8)
         m.box("pole", (bx, 1.05, bz + 0.6), (0.6, 0.05, 0.05))
         m.block(bx - 0.35, bz - 0.95, bx + 0.35, bz + 0.95)
-    m.box("marking", (17.1, 0.05, 10.7), (4.2, 0.01, 0.08))
+    m.box("marking", (17.1, 0.05, 11.1), (4.2, 0.01, 0.08))
     # --- mobil staf (hatchback)
     cx, cz = 17.0, 13.4
     m.box_on_ground("car_teal", cx, cz, (3.6, 0.65, 1.62), y0=0.3)
@@ -521,8 +529,8 @@ def build_props() -> MeshBuilder:
     for i, color in enumerate(("bin_green", "bin_orange")):
         m.cylinder(color, (-19.25, 0.45, 10.4 + i * 0.75), 0.3, 0.9, sides=8)
     m.block(-19.6, 10.05, -18.9, 11.5)
-    # --- forklift parkir di sisi timur dock
-    build_forklift(m, 18.55, 1.2, facing=-1)
+    # --- forklift parkir di samping kantor (di luar sapuan truk panjang)
+    build_forklift(m, -7.6, 13.2, facing=-1)
     # --- papan nama perusahaan & pot bunga di luar pagar utara
     for x in (-8.9, -6.1):
         m.box_on_ground("pole", x, 17.4, (0.12, 2.2, 0.12))

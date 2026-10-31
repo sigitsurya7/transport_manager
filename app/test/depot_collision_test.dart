@@ -93,6 +93,7 @@ void main() {
                     dockLevel: dockLevel,
                     gateLevel: gateLevel,
                     outQueueAhead: outQueue,
+                    front: bounds.$2,
                   );
                   if (pose == null) return;
                   final h = hit(footprint(pose, bounds), obstacles);

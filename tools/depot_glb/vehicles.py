@@ -93,8 +93,8 @@ def slanted_block(m: MeshBuilder, mat, x0, x1, y0, y1, hw, slope, inset=0.0):
 
 def mirrors(m: MeshBuilder, x, y, hw, big=False):
     for s in (-1, 1):
-        m.box("frame", (x, y, s * (hw + 0.14)), (0.05, 0.05, 0.28))
-        m.box("frame", (x, y + (0.0 if not big else 0.05), s * (hw + 0.3)), (0.08, 0.42 if big else 0.2, 0.08))
+        m.box("frame", (x, y, s * (hw + 0.08)), (0.05, 0.05, 0.16))
+        m.box("frame", (x, y + (0.0 if not big else 0.05), s * (hw + 0.18)), (0.08, 0.42 if big else 0.2, 0.07))
 
 
 # ---------------------------------------------------------------- kabin

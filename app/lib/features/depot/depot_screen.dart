@@ -275,7 +275,13 @@ class _DepotScreenState extends State<DepotScreen> {
       for (final snap in snaps) {
         final view = _vehicles[snap.vehicleId];
         if (view != null) {
-          final pose = motion.pose(snap, dockLevel: dockLevel, gateLevel: gateLevel, outQueueAhead: outQueue);
+          final pose = motion.pose(
+            snap,
+            dockLevel: dockLevel,
+            gateLevel: gateLevel,
+            outQueueAhead: outQueue,
+            front: motion.layout.vehicleBounds(view.visual).$2,
+          );
           _placeVehicle(view, snap, pose);
         }
         if (snap.phase == TripPhase.gateOut || snap.phase == TripPhase.gateIn) {

@@ -174,6 +174,9 @@ class DepotMotion {
 
   final DepotLayout layout;
 
+  /// Ujung depan kendaraan acuan jalur (truk engkel lama).
+  static const defaultFront = 3.9;
+
   static const _outQueueX = 3.5, _outQueueGap = 5.5;
   static const _inQueueX = -9.0, _inQueueGap = 6.5;
 
@@ -187,8 +190,18 @@ class DepotMotion {
 
   /// [snap]: keadaan kendaraan; [dockLevel]/[gateLevel]: level fasilitas saat
   /// ini; [outQueueAhead]: jumlah kendaraan yang sudah antre keluar (untuk
-  /// menentukan tempat berhenti kendaraan yang sedang menuju antrean).
-  FloorPose? pose(VehicleSnapshot snap, {required int dockLevel, required int gateLevel, int outQueueAhead = 0}) {
+  /// menentukan tempat berhenti kendaraan yang sedang menuju antrean);
+  /// [front]: jarak origin ke ujung depan kendaraan. Kendaraan panjang
+  /// berbelok lebih awal dan berhenti lebih jauh dari palang agar ujung
+  /// depannya tidak menyapu pos jaga, pulau jalur, atau kantor.
+  FloorPose? pose(
+    VehicleSnapshot snap, {
+    required int dockLevel,
+    required int gateLevel,
+    int outQueueAhead = 0,
+    double front = defaultFront,
+  }) {
+    final extra = math.max(0.0, front - defaultFront);
     final s = layout.slots[snap.slotIndex.clamp(0, layout.slots.length - 1)];
     final lane = layout.laneZ;
     final docks = layout.docks(dockLevel);
@@ -208,7 +221,8 @@ class DepotMotion {
           rv(s.x, lane - 1.5),
           // Ayunan mundur kecil: bak tidak menyentuh pagar barat maupun kantor.
           rv(s.x - 1.0, lane),
-          fw(dock.x + 1.8, lane),
+          // Kendaraan panjang tidak boleh melewati pagar timur saat maju sebelum mundur ke dock.
+          fw(math.min(dock.x + 1.8, 19.4 - front), lane),
           rv(dock.x + 0.2, lane - 2.0),
           // Bagian akhir lurus agar bak tepat di depan platform tanpa menyenggol.
           rv(dock.x, lane - 3.5),
@@ -218,15 +232,26 @@ class DepotMotion {
         return (x: dock.x, z: dock.z, heading: headingSouth);
       case TripPhase.toGate:
         final spot = _outQueueSpot(outQueueAhead);
-        return DepotPath(dock, [fw(dock.x, lane - 1.5), fw(spot.x, spot.z)], startHeading: headingSouth).poseAt(p);
+        // Belok lebih awal bila panjang: moncong tidak menyapu area istirahat di utara jalur.
+        return DepotPath(dock, [
+          fw(dock.x, lane - 1.5 - 1.5 * extra),
+          fw(spot.x, spot.z),
+        ], startHeading: headingSouth).poseAt(p);
       case TripPhase.waitGateOut:
         final spot = _outQueueSpot(snap.queuePosition ?? 0);
         return (x: spot.x, z: spot.z, heading: math.pi);
       case TripPhase.gateOut:
         final spot = _outQueueSpot(0);
-        final approach = DepotPath(spot, [fw(gx + 1.5, lane), fw(gx, lane + 2.0), fw(gx, gz - 3.2)]);
+        final stop = gz - 3.2 - extra;
+        // Kendaraan panjang berbelok di sisi selatan jalur agar moncongnya
+        // selesai menyapu sebelum mendekati kantor & pos jaga.
+        final approach = DepotPath(spot, [
+          fw(gx + 1.5 + 2 * extra, lane - 1.5 * extra),
+          fw(gx, lane + 2.0 - 3 * extra),
+          fw(gx, stop),
+        ]);
         // Lurus melewati gerbang sampai bak lepas dari pilar, baru belok ke lajur kiri.
-        final drive = DepotPath((x: gx, z: gz - 3.2), [fw(gx, gz + 4.2), fw(gx + 4.0, road), fw(gx + 40, road)]);
+        final drive = DepotPath((x: gx, z: stop), [fw(gx, gz + 4.2), fw(gx + 4.0, road), fw(gx + 40, road)]);
         return _staged(approach, drive, p);
       case TripPhase.outbound || TripPhase.unloading || TripPhase.inbound:
         return null;
@@ -236,8 +261,17 @@ class DepotMotion {
       case TripPhase.gateIn:
         final start = _inQueueSpot(0);
         // Belok dari lajur kiri, lalu lurus beberapa meter sebelum berhenti di palang.
-        final approach = DepotPath(start, [fw(gx - 5.0, road), fw(gx, road - 0.4), fw(gx, gz + 3.2)], startHeading: 0);
-        final drive = DepotPath((x: gx, z: gz + 3.2), [fw(gx, gz - 2.5), fw(gx, lane + 1.5)]);
+        final stop = gz + 3.2 + extra;
+        // Kendaraan panjang melebar ke lajur jauh dulu, sehingga sudah lurus
+        // sebelum moncongnya mencapai pilar & pulau jalur.
+        final corner = extra == 0 ? road - 0.4 : 16.9 + front + 3.2;
+        final approach = DepotPath(start, [
+          if (extra > 0) ...[fw(gx - 5.0 - 2 * extra, road), fw(gx - 1.0, corner)],
+          if (extra == 0) fw(gx - 5.0, road),
+          fw(gx, corner - (extra > 0 ? 1.0 : 0.0)),
+          fw(gx, stop),
+        ], startHeading: 0);
+        final drive = DepotPath((x: gx, z: stop), [fw(gx, gz - 2.5), fw(gx, lane + 1.5)]);
         return _staged(approach, drive, p);
       case TripPhase.toSlot:
         final start = (x: gx, z: lane + 1.5);
