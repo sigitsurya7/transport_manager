@@ -56,42 +56,89 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showDevMoney() => showModalBottomSheet<void>(
+  void _showSettings() => showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     backgroundColor: AppColors.surface,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mode dev: tambah uang',
-              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Dicatat di buku besar sebagai "Dana mode dev". Hanya ada di build pengujian.',
-              style: TextStyle(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final amount in const [10000000, 100000000, 1000000000])
-                  FilledButton(
-                    onPressed: () {
-                      session.devAddCash(amount);
-                      Navigator.pop(context);
-                    },
-                    child: Text('+${formatRupiah(amount)}'),
+    builder: (sheet) => ListenableBuilder(
+      listenable: session,
+      builder: (sheet, _) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Pengaturan', style: Theme.of(sheet).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(
+                '${session.meta.companyName} · ${session.city.name}',
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(sheet);
+                  await session.save();
+                  navigator.pop();
+                  messenger.showSnackBar(const SnackBar(content: Text('Permainan tersimpan.')));
+                },
+                child: const Text('Simpan sekarang'),
+              ),
+              const SizedBox(height: 10),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(sheet);
+                  _exit();
+                },
+                child: const Text('Simpan & kembali ke menu utama'),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Game juga tersimpan otomatis. Waktu tetap berjalan saat game ditutup (maks. 48 jam).',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              if (GameSession.devTools) ...[
+                const Divider(height: 32),
+                const Text(
+                  'MODE DEV',
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    fontSize: 12,
                   ),
+                ),
+                const SizedBox(height: 10),
+                const Text('Kecepatan waktu'),
+                const SizedBox(height: 6),
+                SegmentedButton<int>(
+                  segments: [
+                    for (final m in session.clock.entitlement.allowedMultipliers.toList()..sort())
+                      ButtonSegment(value: m, label: Text('$m×')),
+                  ],
+                  selected: {session.clock.speedMultiplier},
+                  onSelectionChanged: (v) => session.setSpeed(v.single),
+                ),
+                const SizedBox(height: 14),
+                const Text('Tambah uang (dicatat sebagai "Dana mode dev")'),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final amount in const [10000000, 100000000, 1000000000])
+                      OutlinedButton(
+                        onPressed: () => session.devAddCash(amount),
+                        child: Text('+${formatRupiahCompact(amount)}'),
+                      ),
+                  ],
+                ),
               ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -108,61 +155,53 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
+      // Tombol kembali Android membuka pengaturan (bukan langsung keluar).
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _exit();
+        if (!didPop) _showSettings();
       },
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           titleSpacing: 16,
           title: ListenableBuilder(
             listenable: session,
             builder: (_, _) => Row(
               children: [
-                const Icon(Icons.schedule_rounded, size: 18, color: AppColors.textMuted),
-                const SizedBox(width: 6),
                 Text(
                   formatGameClock(session.world.now),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
-                if (GameSession.devTools) ...[
-                  const SizedBox(width: 6),
-                  ActionChip(
-                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-                    label: Text('${session.clock.speedMultiplier}×'),
-                    onPressed: session.cycleSpeed,
-                  ),
-                ],
-                const SizedBox(width: 10),
-                const Spacer(),
-                const GlyphIcon(GameGlyph.finance, size: 20, color: AppColors.accent),
-                const SizedBox(width: 6),
-                Flexible(
-                  flex: 100,
-                  // Angka kas panjang menyusut agar tidak menabrak tombol keluar.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      // Mode dev: ketuk kas untuk menambah uang.
-                      onTap: GameSession.devTools ? _showDevMoney : null,
-                      child: Text(
-                        formatRupiahCompact(session.world.cashIdr),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          decoration: GameSession.devTools ? TextDecoration.underline : null,
-                          decorationStyle: TextDecorationStyle.dotted,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const GlyphIcon(GameGlyph.finance, size: 20, color: AppColors.accent),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        // Angka kas panjang menyusut agar tidak menabrak tombol pengaturan.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            formatRupiahCompact(session.world.cashIdr),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          actions: [IconButton(tooltip: 'Simpan & keluar', onPressed: _exit, icon: const Icon(Icons.logout_rounded))],
+          actions: [
+            IconButton(
+              tooltip: 'Pengaturan',
+              onPressed: _showSettings,
+              icon: const GlyphIcon(GameGlyph.settings, color: AppColors.text),
+            ),
+            const SizedBox(width: 4),
+          ],
         ),
         body: IndexedStack(
           index: _tab,

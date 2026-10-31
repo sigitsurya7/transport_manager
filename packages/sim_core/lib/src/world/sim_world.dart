@@ -305,7 +305,7 @@ class SimWorld {
       type: type,
       toLevel: next.level,
       startedAt: now,
-      finishAt: now + next.buildHours * 3600,
+      finishAt: now + next.buildMinutes * 60,
     );
     depot.construction = construction;
     queue.schedule(construction.finishAt, ConstructionFinished(depot.id));
@@ -316,7 +316,8 @@ class SimWorld {
   void _onConstructionFinished(ConstructionFinished e) {
     final depot = _depot(e.depotId);
     final c = depot.construction;
-    if (c == null) return;
+    // Jadwal usang (mis. konstruksi dipercepat setelah update konten) diabaikan.
+    if (c == null || now < c.finishAt) return;
     depot
       ..levels[c.type] = c.toLevel
       ..construction = null;
@@ -909,7 +910,22 @@ class SimWorld {
       nextId: json['next_id'] as int,
     );
     if (format == 1) world._migrateFromV1();
+    world._applyBuildTimes();
     return world;
+  }
+
+  /// Konstruksi berjalan mengikuti lama bangun di konten terbaru bila lebih
+  /// singkat (mis. setelah penyeimbangan), tanpa menunggu jadwal lama.
+  void _applyBuildTimes() {
+    for (final depot in depots.values) {
+      final c = depot.construction;
+      if (c == null) continue;
+      final finish = c.startedAt + content.facilities[c.type].level(c.toLevel).buildMinutes * 60;
+      if (finish >= c.finishAt) continue;
+      final at = finish < now ? now : finish;
+      depot.construction = FacilityConstruction(type: c.type, toLevel: c.toLevel, startedAt: c.startedAt, finishAt: at);
+      queue.schedule(at, ConstructionFinished(depot.id));
+    }
   }
 
   /// Save v1 (Tahap 2b): belum ada gaji harian & dock/jalur gerbang di trip.

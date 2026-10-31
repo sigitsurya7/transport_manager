@@ -70,7 +70,7 @@ void main() {
       final cash = w.cashIdr;
       final c = w.startUpgrade(1, FacilityType.parking);
       expect(w.cashIdr, cash - next.costIdr);
-      expect(c.finishAt - c.startedAt, next.buildHours * 3600);
+      expect(c.finishAt - c.startedAt, next.buildMinutes * 60);
       expect(w.upgradeProblems(1, FacilityType.gate), contains(UpgradeProblem.constructionBusy));
 
       w.advanceTo(c.finishAt - 1);
@@ -80,6 +80,25 @@ void main() {
       expect(w.depots[1]!.parkingSlots, next.intStat('slots'));
       expect(w.depots[1]!.construction, isNull);
       expect(w.log.map((e) => e.kind), containsAllInOrder([WorldLogKind.upgradeStarted, WorldLogKind.upgradeFinished]));
+    });
+
+    test('save dengan konstruksi lama dipercepat sesuai konten terbaru', () {
+      final w = newWorld();
+      final c = w.startUpgrade(1, FacilityType.gate);
+      final json = jsonDecode(jsonEncode(w.toJson())) as Map<String, dynamic>;
+      // Simulasikan save lama: konstruksi 10 jam.
+      final depot = (json['depots'] as List).single as Map<String, dynamic>;
+      (depot['construction'] as Map<String, dynamic>)['finish_at'] = c.startedAt + 10 * 3600;
+      final loaded = SimWorld.fromJson(json, graph: w.graph, content: w.content);
+      expect(loaded.depots[1]!.construction!.finishAt, c.finishAt);
+      loaded.advanceTo(c.finishAt);
+      expect(loaded.depots[1]!.level(FacilityType.gate), 2);
+      // Jadwal lama (jam ke-10) yang tersisa di antrean tidak berpengaruh.
+      loaded.startUpgrade(1, FacilityType.parking);
+      loaded.advanceTo(10 * 3600);
+      expect(loaded.depots[1]!.level(FacilityType.parking), 2);
+      expect(loaded.depots[1]!.level(FacilityType.gate), 2);
+      expect(loaded.depots[1]!.construction, isNull);
     });
 
     test('kas kurang & level maksimum ditolak', () {

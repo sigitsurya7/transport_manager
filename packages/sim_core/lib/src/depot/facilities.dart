@@ -24,7 +24,7 @@ class FacilityLevel {
     required this.model,
     required this.stats,
     this.costIdr = 0,
-    this.buildHours = 0,
+    this.buildMinutes = 0,
   });
 
   /// 1-based.
@@ -35,7 +35,8 @@ class FacilityLevel {
   final String model;
   final Map<String, num> stats;
   final int costIdr;
-  final int buildHours;
+  /// Lama konstruksi (menit game).
+  final int buildMinutes;
 
   int intStat(String key) => (stats[key] ?? (throw StateError('Stat "$key" tidak ada di level $level'))).toInt();
   double doubleStat(String key) => (stats[key] ?? (throw StateError('Stat "$key" tidak ada di level $level'))).toDouble();
@@ -67,7 +68,7 @@ class FacilityCatalog {
     _requireStat(FacilityType.office, 'staff_max');
     for (final s in _specs.values) {
       for (var i = 1; i < s.levels.length; i++) {
-        if (s.levels[i].costIdr <= 0 || s.levels[i].buildHours <= 0) {
+        if (s.levels[i].costIdr <= 0 || s.levels[i].buildMinutes <= 0) {
           throw FormatException('${s.type.id} level ${i + 1}: biaya & lama konstruksi wajib');
         }
       }
@@ -90,10 +91,10 @@ class FacilityCatalog {
                   label: l['label'] as String,
                   model: l['model'] as String,
                   costIdr: (l['cost_idr'] as num?)?.toInt() ?? 0,
-                  buildHours: (l['build_hours'] as num?)?.toInt() ?? 0,
+                  buildMinutes: (l['build_minutes'] as num?)?.toInt() ?? 0,
                   stats: {
                     for (final e in l.entries)
-                      if (e.value is num && !const {'cost_idr', 'build_hours'}.contains(e.key)) e.key: e.value as num,
+                      if (e.value is num && !const {'cost_idr', 'build_minutes'}.contains(e.key)) e.key: e.value as num,
                   },
                 ),
             ],

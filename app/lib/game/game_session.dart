@@ -268,6 +268,12 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   Depot get depot => world.depots.values.first;
 
+  /// Atur pengali kecepatan (hanya nilai yang diizinkan entitlement).
+  void setSpeed(int multiplier) {
+    clock.setSpeedMultiplier(multiplier);
+    notifyListeners();
+  }
+
   /// Ganti pengali kecepatan ke nilai berikutnya yang diizinkan.
   void cycleSpeed() {
     final allowed = clock.entitlement.allowedMultipliers.toList()..sort();

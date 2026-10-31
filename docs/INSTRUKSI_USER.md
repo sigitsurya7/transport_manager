@@ -100,3 +100,13 @@ Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Ara
 ## 2026-10-31 — Lanjutkan
 
 > lanjutkan
+
+## 2026-10-31 — Bilah atas, waktu upgrade, lanjut Tahap 4
+
+> Untuk topBar kau bisa buat...
+> Paling Kiri ada Hari x . Waktu in game
+> Paling Kanan Uang dan tombol pengaturan.
+>
+> Hapus saja button kembali dan button keluar. ganti dengan button Pengaturan. Waktu upgrade sangat lama.
+>
+> Setelah itu lanjut ke tahap 4.

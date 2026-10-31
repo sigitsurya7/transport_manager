@@ -107,7 +107,9 @@ class _FacilityCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(facilityStats(type, next)),
             const SizedBox(height: 4),
-            Text('${formatRupiah(next.costIdr)} · dibangun ${next.buildHours} jam game',
+            Text(
+                '${formatRupiah(next.costIdr)} · dibangun ${formatDuration(next.buildMinutes * 60)} '
+                '(≈ ${formatRealDuration(next.buildMinutes * 60, session.timeScale)} nyata)',
                 style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
             const SizedBox(height: 10),
             SizedBox(

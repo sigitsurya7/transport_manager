@@ -136,6 +136,12 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Diuji di HP: 3 kendaraan berbeda di parkir, truk engkel dimuat 2 staf, antrean dock, konstruksi gerbang, peta tanpa garis oranye.
 - [x] Ekstrak OSM Jawa (Geofabrik) selesai diunduh.
 
+### 2026-10-31 — Bilah atas & waktu upgrade
+
+- [x] Bilah atas: kiri "Hari x · jam", kanan uang (ringkas) + tombol **Pengaturan** (ikon roda gigi khusus). Tombol kembali & keluar dihapus; tombol kembali Android membuka Pengaturan.
+- [x] Pengaturan: simpan sekarang, simpan & kembali ke menu utama; mode dev: kecepatan waktu 1×/10×/60× & tambah uang.
+- [x] **Waktu konstruksi dipersingkat**: dari 6–36 jam game menjadi 45–180 menit game (±5–18 menit nyata). Konstruksi yang sedang berjalan di save lama ikut dipercepat saat dimuat (diuji).
+
 ## Berikutnya
 
 - [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.

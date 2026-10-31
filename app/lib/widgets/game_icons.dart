@@ -37,30 +37,43 @@ class _VehicleStyle {
 /// Warna & bentuk sama dengan model 3D (`tools/depot_glb`).
 const _vehicleStyles = {
   'pickup_open': _VehicleStyle(
-      cab: _Cab.nosed, cabColor: Color(0xFFF5F5F2), body: _Body.openBed, bodyColor: Color(0xFF8D939A), axles: [14, 49]),
+    cab: _Cab.nosed,
+    cabColor: Color(0xFFF5F5F2),
+    body: _Body.openBed,
+    bodyColor: Color(0xFF8D939A),
+    axles: [14, 49],
+  ),
   'box_car': _VehicleStyle(
-      cab: _Cab.semi, cabColor: Color(0xFFB7BEC6), body: _Body.box, bodyColor: Color(0xFFE9ECEF), accent: Color(0xFFF2B630)),
+    cab: _Cab.semi,
+    cabColor: Color(0xFFB7BEC6),
+    body: _Body.box,
+    bodyColor: Color(0xFFE9ECEF),
+    accent: Color(0xFFF2B630),
+  ),
   'mini_truck': _VehicleStyle(
-      cab: _Cab.flat,
-      cabColor: Color(0xFF2F6DB5),
-      body: _Body.tallBox,
-      bodyColor: Color(0xFFF0F0EC),
-      accent: Color(0xFF2F6DB5),
-      axles: [13, 52]),
+    cab: _Cab.flat,
+    cabColor: Color(0xFF2F6DB5),
+    body: _Body.tallBox,
+    bodyColor: Color(0xFFF0F0EC),
+    accent: Color(0xFF2F6DB5),
+    axles: [13, 52],
+  ),
   'engkel_truck': _VehicleStyle(
-      cab: _Cab.flat,
-      cabColor: Color(0xFFE8A623),
-      body: _Body.woodBed,
-      bodyColor: Color(0xFFB8895A),
-      axles: [15, 54],
-      dualRear: true),
+    cab: _Cab.flat,
+    cabColor: Color(0xFFE8A623),
+    body: _Body.woodBed,
+    bodyColor: Color(0xFFB8895A),
+    axles: [15, 54],
+    dualRear: true,
+  ),
   'container_truck': _VehicleStyle(
-      cab: _Cab.flat,
-      cabColor: Color(0xFFC8432F),
-      body: _Body.container,
-      bodyColor: Color(0xFF2E7D7A),
-      axles: [15, 54],
-      dualRear: true),
+    cab: _Cab.flat,
+    cabColor: Color(0xFFC8432F),
+    body: _Body.container,
+    bodyColor: Color(0xFF2E7D7A),
+    axles: [15, 54],
+    dualRear: true,
+  ),
 };
 
 /// Ikon kendaraan tampak samping sesuai jenis (`VehicleModel.visual`).
@@ -71,10 +84,7 @@ class VehicleIcon extends StatelessWidget {
   final double width;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: Size(width, width / 2),
-        painter: VehiclePainter(visual),
-      );
+  Widget build(BuildContext context) => CustomPaint(size: Size(width, width / 2), painter: VehiclePainter(visual));
 }
 
 class VehiclePainter extends CustomPainter {
@@ -166,13 +176,14 @@ class VehiclePainter extends CustomPainter {
           ..close();
         shape(cab, s.cabColor);
         canvas.drawPath(
-            Path()
-              ..moveTo(cabLeft + 5, cabTop + 1.8)
-              ..lineTo(cabLeft + 8.6, cabTop + 1.8)
-              ..lineTo(cabLeft + 12.6, cabTop + 6.3)
-              ..lineTo(cabLeft + 5, cabTop + 6.3)
-              ..close(),
-            Paint()..color = _window);
+          Path()
+            ..moveTo(cabLeft + 5, cabTop + 1.8)
+            ..lineTo(cabLeft + 8.6, cabTop + 1.8)
+            ..lineTo(cabLeft + 12.6, cabTop + 6.3)
+            ..lineTo(cabLeft + 5, cabTop + 6.3)
+            ..close(),
+          Paint()..color = _window,
+        );
       case _Cab.semi || _Cab.flat:
         final slant = s.cab == _Cab.semi ? 5.0 : 1.4;
         final cab = Path()
@@ -185,13 +196,14 @@ class VehiclePainter extends CustomPainter {
           ..close();
         shape(cab, s.cabColor);
         canvas.drawPath(
-            Path()
-              ..moveTo(cabLeft + 5, cabTop + 1.8)
-              ..lineTo(front - slant - 0.4, cabTop + 1.8)
-              ..lineTo(front - (s.cab == _Cab.semi ? 1.8 : 0.9), cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
-              ..lineTo(cabLeft + 5, cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
-              ..close(),
-            Paint()..color = _window);
+          Path()
+            ..moveTo(cabLeft + 5, cabTop + 1.8)
+            ..lineTo(front - slant - 0.4, cabTop + 1.8)
+            ..lineTo(front - (s.cab == _Cab.semi ? 1.8 : 0.9), cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
+            ..lineTo(cabLeft + 5, cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
+            ..close(),
+          Paint()..color = _window,
+        );
         if (s.cab == _Cab.flat) {
           canvas.drawRect(Rect.fromLTRB(front - 5.5, 15.5, front - 0.6, 17), Paint()..color = const Color(0xFF39434D));
         }
@@ -224,7 +236,23 @@ class VehiclePainter extends CustomPainter {
 // ------------------------------------------------------------------ glyph
 
 /// Glyph satu warna untuk navigasi, fasilitas, & karyawan.
-enum GameGlyph { depot, map, contracts, fleet, finance, parking, gate, dock, warehouse, office, construction, driver, staff, store }
+enum GameGlyph {
+  depot,
+  map,
+  contracts,
+  fleet,
+  finance,
+  parking,
+  gate,
+  dock,
+  warehouse,
+  office,
+  construction,
+  driver,
+  staff,
+  store,
+  settings,
+}
 
 /// Gambar glyph langsung ke kanvas (mis. pin di peta) dalam kotak [rect].
 void paintGlyph(Canvas canvas, GameGlyph glyph, Rect rect, Color color) {
@@ -235,12 +263,12 @@ void paintGlyph(Canvas canvas, GameGlyph glyph, Rect rect, Color color) {
 }
 
 GameGlyph facilityGlyph(FacilityType t) => switch (t) {
-      FacilityType.parking => GameGlyph.parking,
-      FacilityType.gate => GameGlyph.gate,
-      FacilityType.loadingDock => GameGlyph.dock,
-      FacilityType.warehouse => GameGlyph.warehouse,
-      FacilityType.office => GameGlyph.office,
-    };
+  FacilityType.parking => GameGlyph.parking,
+  FacilityType.gate => GameGlyph.gate,
+  FacilityType.loadingDock => GameGlyph.dock,
+  FacilityType.warehouse => GameGlyph.warehouse,
+  FacilityType.office => GameGlyph.office,
+};
 
 class GlyphIcon extends StatelessWidget {
   const GlyphIcon(this.glyph, {super.key, this.size = 24, this.color});
@@ -251,9 +279,9 @@ class GlyphIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-        size: Size.square(size),
-        painter: _GlyphPainter(glyph, color ?? IconTheme.of(context).color ?? Colors.white),
-      );
+    size: Size.square(size),
+    painter: _GlyphPainter(glyph, color ?? IconTheme.of(context).color ?? Colors.white),
+  );
 }
 
 class _GlyphPainter extends CustomPainter {
@@ -282,7 +310,16 @@ class _GlyphPainter extends CustomPainter {
     switch (glyph) {
       case GameGlyph.depot:
         // gudang beratap pelana + pintu rol + pikap kecil
-        canvas.drawPath(Path()..moveTo(2, 10)..lineTo(10, 4)..lineTo(18, 10)..lineTo(18, 20)..lineTo(2, 20)..close(), stroke);
+        canvas.drawPath(
+          Path()
+            ..moveTo(2, 10)
+            ..lineTo(10, 4)
+            ..lineTo(18, 10)
+            ..lineTo(18, 20)
+            ..lineTo(2, 20)
+            ..close(),
+          stroke,
+        );
         canvas.drawRect(const Rect.fromLTRB(6, 13, 14, 20), stroke);
         for (final y in [15.3, 17.6]) {
           canvas.drawLine(Offset(6.5, y), Offset(13.5, y), thin);
@@ -293,35 +330,69 @@ class _GlyphPainter extends CustomPainter {
       case GameGlyph.map:
         // peta lipat + rute putus-putus + pin
         canvas.drawPath(
-            Path()
-              ..moveTo(2, 6)..lineTo(8, 4)..lineTo(16, 6)..lineTo(22, 4)
-              ..lineTo(22, 19)..lineTo(16, 21)..lineTo(8, 19)..lineTo(2, 21)..close(),
-            stroke);
-        final route = Path()..moveTo(5, 17)..quadraticBezierTo(9, 9, 13, 14)..quadraticBezierTo(15.5, 17, 17.5, 12.5);
+          Path()
+            ..moveTo(2, 6)
+            ..lineTo(8, 4)
+            ..lineTo(16, 6)
+            ..lineTo(22, 4)
+            ..lineTo(22, 19)
+            ..lineTo(16, 21)
+            ..lineTo(8, 19)
+            ..lineTo(2, 21)
+            ..close(),
+          stroke,
+        );
+        final route = Path()
+          ..moveTo(5, 17)
+          ..quadraticBezierTo(9, 9, 13, 14)
+          ..quadraticBezierTo(15.5, 17, 17.5, 12.5);
         for (final m in route.computeMetrics()) {
           for (var d = 0.0; d < m.length; d += 3.2) {
             canvas.drawPath(m.extractPath(d, math.min(d + 1.6, m.length)), thin);
           }
         }
         canvas.drawPath(
-            Path()
-              ..moveTo(17.5, 12.5)
-              ..cubicTo(14.8, 9.5, 15.2, 6.2, 17.5, 6.2)
-              ..cubicTo(19.8, 6.2, 20.2, 9.5, 17.5, 12.5),
-            fill);
+          Path()
+            ..moveTo(17.5, 12.5)
+            ..cubicTo(14.8, 9.5, 15.2, 6.2, 17.5, 6.2)
+            ..cubicTo(19.8, 6.2, 20.2, 9.5, 17.5, 12.5),
+          fill,
+        );
       case GameGlyph.contracts:
         // papan klip + kardus + centang
         canvas.drawRRect(RRect.fromLTRBR(4, 4, 20, 22, const Radius.circular(2)), stroke);
         canvas.drawRRect(RRect.fromLTRBR(8.5, 2.5, 15.5, 6, const Radius.circular(1)), fill);
         canvas.drawRect(const Rect.fromLTRB(7.5, 9, 13, 14.5), stroke);
         canvas.drawLine(const Offset(10.25, 9), const Offset(10.25, 11.5), thin);
-        canvas.drawPath(Path()..moveTo(13.8, 18)..lineTo(15.5, 19.6)..lineTo(18.5, 15.6), stroke);
+        canvas.drawPath(
+          Path()
+            ..moveTo(13.8, 18)
+            ..lineTo(15.5, 19.6)
+            ..lineTo(18.5, 15.6),
+          stroke,
+        );
         canvas.drawLine(const Offset(7.5, 18.5), const Offset(11.5, 18.5), thin);
       case GameGlyph.fleet:
         // truk box tampak samping
         canvas.drawRRect(RRect.fromLTRBR(1.5, 6, 14.5, 17, const Radius.circular(1.2)), stroke);
-        canvas.drawPath(Path()..moveTo(14.5, 9)..lineTo(19, 9)..lineTo(22.5, 13)..lineTo(22.5, 17)..lineTo(14.5, 17), stroke);
-        canvas.drawPath(Path()..moveTo(16.5, 10.8)..lineTo(18.3, 10.8)..lineTo(20.2, 13)..lineTo(16.5, 13)..close(), fill);
+        canvas.drawPath(
+          Path()
+            ..moveTo(14.5, 9)
+            ..lineTo(19, 9)
+            ..lineTo(22.5, 13)
+            ..lineTo(22.5, 17)
+            ..lineTo(14.5, 17),
+          stroke,
+        );
+        canvas.drawPath(
+          Path()
+            ..moveTo(16.5, 10.8)
+            ..lineTo(18.3, 10.8)
+            ..lineTo(20.2, 13)
+            ..lineTo(16.5, 13)
+            ..close(),
+          fill,
+        );
         for (final x in [6.0, 18.5]) {
           canvas.drawCircle(Offset(x, 18.5), 2.4, Paint()..color = color);
           canvas.drawCircle(Offset(x, 18.5), 0.9, Paint()..color = Colors.black.withValues(alpha: 0.55));
@@ -329,7 +400,10 @@ class _GlyphPainter extends CustomPainter {
       case GameGlyph.finance:
         // tumpukan koin + "Rp"
         for (final y in [18.5, 15.5, 12.5]) {
-          canvas.drawOval(Rect.fromCenter(center: Offset(9, y), width: 13, height: 4.4), Paint()..color = color.withValues(alpha: 0.35));
+          canvas.drawOval(
+            Rect.fromCenter(center: Offset(9, y), width: 13, height: 4.4),
+            Paint()..color = color.withValues(alpha: 0.35),
+          );
           canvas.drawOval(Rect.fromCenter(center: Offset(9, y), width: 13, height: 4.4), thin);
         }
         canvas.drawCircle(const Offset(16.5, 8), 5.6, stroke);
@@ -337,10 +411,14 @@ class _GlyphPainter extends CustomPainter {
       case GameGlyph.parking:
         canvas.drawRRect(RRect.fromLTRBR(3, 3, 21, 21, const Radius.circular(4)), stroke);
         canvas.drawPath(
-            Path()
-              ..moveTo(9, 17.5)..lineTo(9, 6.5)..lineTo(13.2, 6.5)
-              ..cubicTo(17, 6.5, 17, 12.4, 13.2, 12.4)..lineTo(9, 12.4),
-            stroke);
+          Path()
+            ..moveTo(9, 17.5)
+            ..lineTo(9, 6.5)
+            ..lineTo(13.2, 6.5)
+            ..cubicTo(17, 6.5, 17, 12.4, 13.2, 12.4)
+            ..lineTo(9, 12.4),
+          stroke,
+        );
       case GameGlyph.gate:
         // tiang + palang bergaris
         canvas.drawRRect(RRect.fromLTRBR(2.5, 9, 6.5, 21, const Radius.circular(1)), fill);
@@ -359,7 +437,16 @@ class _GlyphPainter extends CustomPainter {
         canvas.drawRRect(RRect.fromLTRBR(13, 9, 22.5, 18.5, const Radius.circular(1)), stroke);
         canvas.drawCircle(const Offset(19.5, 20), 2, fill);
       case GameGlyph.warehouse:
-        canvas.drawPath(Path()..moveTo(2, 10)..lineTo(12, 3.5)..lineTo(22, 10)..lineTo(22, 21)..lineTo(2, 21)..close(), stroke);
+        canvas.drawPath(
+          Path()
+            ..moveTo(2, 10)
+            ..lineTo(12, 3.5)
+            ..lineTo(22, 10)
+            ..lineTo(22, 21)
+            ..lineTo(2, 21)
+            ..close(),
+          stroke,
+        );
         for (final y in [13.5, 17.5]) {
           canvas.drawLine(Offset(6, y), Offset(18, y), thin);
         }
@@ -376,10 +463,25 @@ class _GlyphPainter extends CustomPainter {
         }
         canvas.drawRect(const Rect.fromLTRB(8.6, 17.5, 11.4, 21), fill);
       case GameGlyph.construction:
-        canvas.drawPath(Path()..moveTo(12, 3)..lineTo(18, 19)..lineTo(6, 19)..close(), fill);
+        canvas.drawPath(
+          Path()
+            ..moveTo(12, 3)
+            ..lineTo(18, 19)
+            ..lineTo(6, 19)
+            ..close(),
+          fill,
+        );
         canvas.drawRect(const Rect.fromLTRB(3, 19, 21, 21.5), fill);
         final band = Paint()..color = Colors.black.withValues(alpha: 0.35);
-        canvas.drawPath(Path()..moveTo(9.4, 10)..lineTo(14.6, 10)..lineTo(15.5, 12.5)..lineTo(8.5, 12.5)..close(), band);
+        canvas.drawPath(
+          Path()
+            ..moveTo(9.4, 10)
+            ..lineTo(14.6, 10)
+            ..lineTo(15.5, 12.5)
+            ..lineTo(8.5, 12.5)
+            ..close(),
+          band,
+        );
       case GameGlyph.driver:
         // setir
         canvas.drawCircle(const Offset(12, 12), 9, stroke);
@@ -387,34 +489,70 @@ class _GlyphPainter extends CustomPainter {
         canvas.drawLine(const Offset(3.5, 11), const Offset(9.6, 11.6), stroke);
         canvas.drawLine(const Offset(20.5, 11), const Offset(14.4, 11.6), stroke);
         canvas.drawLine(const Offset(12, 14.6), const Offset(12, 20.8), stroke);
+      case GameGlyph.settings:
+        // roda gigi: cincin tebal + 8 gigi persegi
+        canvas.drawCircle(
+          const Offset(12, 12),
+          5.6,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3.4,
+        );
+        for (var i = 0; i < 8; i++) {
+          canvas.save();
+          canvas.translate(12, 12);
+          canvas.rotate(i * math.pi / 4);
+          canvas.drawRRect(RRect.fromLTRBR(-1.7, -10.4, 1.7, -6.4, const Radius.circular(0.8)), fill);
+          canvas.restore();
+        }
       case GameGlyph.store:
         // toko dengan kanopi bergaris
         canvas.drawRect(const Rect.fromLTRB(4, 11, 20, 21), stroke);
-        final awning = Path()..moveTo(2.5, 10.5)..lineTo(4.5, 4)..lineTo(19.5, 4)..lineTo(21.5, 10.5)..close();
+        final awning = Path()
+          ..moveTo(2.5, 10.5)
+          ..lineTo(4.5, 4)
+          ..lineTo(19.5, 4)
+          ..lineTo(21.5, 10.5)
+          ..close();
         canvas.drawPath(awning, fill);
         for (final x in [8.0, 12.0, 16.0]) {
-          canvas.drawLine(Offset(x, 4.5), Offset(x + 0.6, 10), Paint()
-            ..color = Colors.black.withValues(alpha: 0.35)
-            ..strokeWidth = 1.4);
+          canvas.drawLine(
+            Offset(x, 4.5),
+            Offset(x + 0.6, 10),
+            Paint()
+              ..color = Colors.black.withValues(alpha: 0.35)
+              ..strokeWidth = 1.4,
+          );
         }
         canvas.drawRect(const Rect.fromLTRB(10, 15, 14, 21), fill);
       case GameGlyph.staff:
         // helm proyek
         canvas.drawPath(
-            Path()
-              ..moveTo(4, 16)..cubicTo(4, 7, 20, 7, 20, 16)..close(),
-            fill);
+          Path()
+            ..moveTo(4, 16)
+            ..cubicTo(4, 7, 20, 7, 20, 16)
+            ..close(),
+          fill,
+        );
         canvas.drawRRect(RRect.fromLTRBR(2, 16, 22, 19, const Radius.circular(1.5)), fill);
-        canvas.drawLine(const Offset(12, 7.6), const Offset(12, 15), Paint()
-          ..color = Colors.black.withValues(alpha: 0.35)
-          ..strokeWidth = 1.6);
+        canvas.drawLine(
+          const Offset(12, 7.6),
+          const Offset(12, 15),
+          Paint()
+            ..color = Colors.black.withValues(alpha: 0.35)
+            ..strokeWidth = 1.6,
+        );
     }
     canvas.restore();
   }
 
   static void _text(Canvas canvas, String text, Offset center, double size, Color color) {
     final tp = TextPainter(
-      text: TextSpan(text: text, style: TextStyle(fontSize: size, fontWeight: FontWeight.w900, color: color)),
+      text: TextSpan(
+        text: text,
+        style: TextStyle(fontSize: size, fontWeight: FontWeight.w900, color: color),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
@@ -434,8 +572,10 @@ class AppLogo extends StatelessWidget {
   final bool rounded;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: AppLogoPainter(rounded: rounded));
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.square(size),
+    painter: AppLogoPainter(rounded: rounded),
+  );
 }
 
 class AppLogoPainter extends CustomPainter {
@@ -464,12 +604,13 @@ class AppLogoPainter extends CustomPainter {
       ..cubicTo(30, 70, 20, 50, 55, 42)
       ..cubicTo(78, 37, 80, 26, 76, 18);
     canvas.drawPath(
-        road,
-        Paint()
-          ..color = const Color(0xFF1B2733)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 17
-          ..strokeCap = StrokeCap.round);
+      road,
+      Paint()
+        ..color = const Color(0xFF1B2733)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 17
+        ..strokeCap = StrokeCap.round,
+    );
     final metrics = road.computeMetrics().first;
     final dash = Paint()
       ..color = const Color(0xFFF7C64D)
