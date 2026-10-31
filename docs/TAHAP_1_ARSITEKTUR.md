@@ -1,6 +1,6 @@
 # Tahap 1 — Technical Feasibility & Architecture
 
-Dokumen ini adalah jawaban atas bagian 23 di [`MANUAL_INSTRUCTION.md`](../MANUAL_INSTRUCTION.md). Statusnya **draft untuk disetujui** — implementasi (Tahap 2) baru dimulai setelah keputusan di bagian [Keputusan yang Perlu Disetujui](#keputusan-yang-perlu-disetujui) dikonfirmasi.
+Dokumen ini adalah jawaban atas bagian 23 di [`MANUAL_INSTRUCTION.md`](../MANUAL_INSTRUCTION.md). Statusnya **disetujui** (2026-10-31). Keputusan final ada di bagian [Keputusan](#keputusan-disetujui-2026-10-31) di akhir dokumen.
 
 Nama kerja proyek: **Transport Manager** (repo `transport_manager`).
 
@@ -54,21 +54,21 @@ Kesimpulan: game ini layak dibangun di Flutter **asalkan** renderer 3D diisolasi
 
 ## 4. Rekomendasi Flutter & 3D Engine
 
-Kandidat (semua perlu diverifikasi ulang versinya saat spike Tahap 2, karena ekosistem ini bergerak cepat):
+Kondisi ekosistem per Oktober 2026 (dicek ulang saat keputusan dibuat):
 
-| Opsi | Kelebihan | Kekurangan |
-|---|---|---|
-| **Thermion / Filament** (binding Flutter untuk Google Filament) | Renderer PBR native yang matang, glTF, instancing, berjalan di Android & iOS | Ukuran APK bertambah, API binding masih berkembang |
-| **flutter_scene** (di atas Flutter GPU / Impeller) | Paling "native Flutter" | Masih eksperimental; ketersediaan Flutter GPU di channel stable perlu dicek |
-| **three_js port Dart** | API familiar | Performa & pemeliharaan kurang terjamin |
-| **Flame (2.5D isometrik, sprite pra-render)** | Stabil, ringan, sangat cepat di HP murah | Bukan 3D sejati, rotasi kamera terbatas (4 sudut) |
-| Unity/Godot di-embed sebagai view | Engine 3D penuh | Integrasi rumit, ukuran besar, dua codebase |
+| Opsi | Versi terbaru | Kelebihan | Kekurangan |
+|---|---|---|---|
+| **flutter_scene** (di atas Flutter GPU / Impeller) | 0.24.x | Paling baru dan paling "native Flutter"; glTF/GLB, PBR + IBL, skinned animation, **instancing dan LOD otomatis** bawaan; Impeller sudah default di Android | Pre-1.0, minor release bisa breaking; **butuh Flutter channel master** karena Flutter GPU belum masuk stable |
+| **Thermion** (binding Flutter untuk Google Filament) | 0.5.0 (Agustus 2026) | Renderer Filament yang matang, berjalan di **Flutter stable**, Android/iOS arm64 | Binding pihak ketiga, ukuran APK lebih besar, collision masih eksperimental |
+| Flame (2.5D isometrik) | — | Stabil dan ringan | Bukan 3D sejati |
 
-**Rekomendasi:**
+**Keputusan (disetujui 2026-10-31): gunakan yang terbaik dan terbaru.**
 
-1. **Primer: Thermion (Filament)** untuk depot 3D dengan kamera orbit/zoom.
-2. **Fallback yang sudah direncanakan: Flame isometrik 2.5D** dengan sprite yang dirender dari model 3D yang sama (4 sudut kamera).
+1. **Primer: `flutter_scene`** dengan Flutter master yang **dipin ke satu commit** (via FVM, `.fvmrc` di repo) agar build reproducible. Upgrade Flutter/flutter_scene dilakukan sengaja, bukan otomatis.
+2. **Fallback: Thermion** di Flutter stable, dipakai jika spike menunjukkan flutter_scene bermasalah (crash GPU tertentu, performa < 30 fps di HP menengah, atau breaking change yang menghambat).
 3. Keduanya mengimplementasikan interface yang sama `DepotSceneRenderer`, yang hanya membaca `DepotSnapshot` (state hasil simulasi). Renderer **tidak pernah** menulis state.
+
+Spike 2a membandingkan keduanya dengan scene depot yang sama (3 slot, gudang, 1 pikap bergerak, 6 pekerja) di HP Android menengah: fps, waktu load, memori, ukuran APK.
 
 Aset 3D: glTF/GLB low-poly, satu atlas tekstur per set fasilitas, LOD 2 tingkat, kendaraan dan pekerja di-instance.
 
@@ -99,6 +99,8 @@ packs/id-jawa/
   roads.sqlite       # road graph untuk routing
   places.json        # kota, lokasi depot, toko/supplier sintetis yang dipetakan ke node jalan
 ```
+
+**Kota awal (disetujui):** pemain bebas memilih salah satu dari 6 ibu kota provinsi di Pulau Jawa — **Jakarta, Serang, Bandung, Semarang, Yogyakarta, Surabaya** — semuanya dalam satu map pack `id-jawa`, sehingga rute antarkota antar-ibukota sudah tersedia sejak awal. Setiap kota punya 2–3 lokasi depot awal yang dipilih di dekat kawasan pergudangan/industri nyata.
 
 Paket dibundel di APK (untuk wilayah awal) atau diimpor dari file lokal; tidak ada unduhan saat gameplay. Atribusi OSM (ODbL) wajib ditampilkan di layar peta dan credits.
 
@@ -278,8 +280,8 @@ Saat **dibuka:**
 2. **Validasi waktu:**
    - Jika boot sama dan |Δwall − Δmono| besar → jam perangkat diubah; pakai Δmono.
    - Jika Δwall negatif → Δ = 0 (waktu tidak mundur), catat anomali.
-   - **Batas catch-up** (usulan 72 jam nyata); sisa waktu di atas batas diabaikan, bukan "dihukum".
-3. Konversi ke waktu game (`time scale`, lihat keputusan di bawah).
+   - **Batas catch-up 48 jam nyata** (= 4 jam 48 menit waktu game); sisa waktu di atas batas diabaikan, bukan "dihukum".
+3. Konversi ke waktu game: **10 menit nyata = 1 menit game** (`timeScale = 0.1`, disimpan di konfigurasi, bukan hardcode).
 4. Jalankan event queue sampai `now` (batch, di Isolate, dengan progress bar jika lama).
 5. **Kebijakan anti-hukuman:** selama offline, kendaraan yang menganggur tidak mengambil kontrak baru; kontrak berulang yang terlewat dibatalkan tanpa penalti berat; kas tidak boleh membuat perusahaan bangkrut hanya karena offline (gaji ditangguhkan, bukan pailit instan).
 6. Tampilkan ringkasan dari `event_log`.
@@ -318,10 +320,10 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 |---|---|---|
 | 1 | Dokumen ini | Keputusan teknis disetujui |
 | 2a | Spike 3D (Thermion vs Flame) + spike routing di graph kota nyata | Benchmark fps & waktu routing di HP target |
-| 2b | Core prototype: New Game → depot 3 slot → 1 pikap 1 sopir 1 kontrak → keluar depot → rute nyata → kembali → autosave/load | Satu siklus pengiriman penuh, test sim_core hijau |
+| 2b | Core prototype: New Game → pilih salah satu dari 6 ibu kota Jawa → depot 3 slot → 1 pikap 1 sopir 1 kontrak → keluar depot → rute nyata → kembali → autosave/load | Satu siklus pengiriman penuh, test sim_core hijau |
 | 3 | Depot simulation: gate, dock, antrean, pekerja, upgrade + visual | Antrean memengaruhi waktu, upgrade mengubah visual |
 | 4 | Business simulation: kontrak lengkap, barang, warehouse, staff, finance, maintenance, asuransi, kecelakaan | Laporan laba rugi konsisten dengan ledger |
-| 5 | Offline simulation lengkap + validasi waktu + ringkasan | Test determinisme: catch-up 1×72 jam == 72×1 jam |
+| 5 | Offline simulation lengkap + validasi waktu + ringkasan | Test determinisme: catch-up 1×48 jam == 48×1 jam |
 | 6 | Ekspansi: kendaraan besar, trailer, multi-depot, wilayah lain | Depot kedua di kota lain beroperasi |
 
 ## 17. Risiko Teknis & Solusi
@@ -340,10 +342,26 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 
 ---
 
-## Keputusan yang Perlu Disetujui
+## Keputusan (disetujui 2026-10-31)
 
-1. **Engine 3D:** Thermion/Filament sebagai primer, Flame 2.5D sebagai fallback — diputuskan final setelah spike 2a. *(Rekomendasi: setuju)*
-2. **Wilayah awal prototype:** satu kota dulu (usul: **Surabaya** atau **Bandung**, graph lebih kecil daripada Jakarta), lalu diperluas ke seluruh Jawa.
-3. **Skala waktu game:** usul **1 menit nyata = 10 menit game** saat aktif, dengan opsi percepat 2×/4×; offline mengikuti skala yang sama, catch-up maks 72 jam nyata.
-4. **Monorepo** dengan `app/` + `packages/sim_core` + `tools/`. *(Rekomendasi: setuju)*
-5. **State management:** Riverpod. *(Rekomendasi: setuju)*
+| # | Topik | Keputusan |
+|---|---|---|
+| 1 | Engine 3D | Terbaik & terbaru: **flutter_scene** (Flutter master dipin via FVM), fallback **Thermion**; diverifikasi lewat spike 2a |
+| 2 | Kota awal | Dipilih pemain; tersedia 6 ibu kota provinsi Jawa: Jakarta, Serang, Bandung, Semarang, Yogyakarta, Surabaya |
+| 3 | Skala waktu | **10 menit nyata = 1 menit game** (`timeScale = 0.1`); catch-up offline maks **48 jam nyata** |
+| 4 | Repo | Monorepo `app/` + `packages/` + `tools/` |
+| 5 | State management | Riverpod |
+
+### Dampak skala waktu terhadap desain
+
+Dengan `timeScale = 0.1`, waktu game berjalan 10× lebih lambat dari dunia nyata:
+
+| Kejadian (waktu game) | Durasi nyata |
+|---|---|
+| Bongkar muat 15 menit | 2,5 jam |
+| Pengiriman dalam kota ~1 jam | 10 jam |
+| Jakarta → Bandung ~3 jam | 30 jam |
+| Satu hari game (gaji harian) | 10 hari |
+| Catch-up maks 48 jam nyata | 4 jam 48 menit game |
+
+Konsekuensi yang harus ditangani di desain: tempo per-pengiriman menjadi panjang, sehingga gaji, sewa, dan premi perlu dihitung per jam game (bukan per hari) agar ekonomi tetap terasa; dan perlu diputuskan apakah pemain boleh mempercepat waktu saat bermain aktif (usulan: ya, opsi 2×–10×). `timeScale` dibuat konfigurasi agar mudah di-tuning setelah playtest.
