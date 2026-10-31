@@ -9,6 +9,9 @@ enum DispatchProblem {
   vehicleInWorkshop,
   driverBusy,
 
+  /// Sopir mencapai batas jam mengemudi; harus istirahat di depot.
+  driverNeedsRest,
+
   /// Kelas kendaraan di bawah minimum jangkauan kontrak (mis. pikap untuk antarkota).
   vehicleClassTooSmall,
 
@@ -35,6 +38,7 @@ class DispatchQuote {
     required this.revenueIdr,
     required this.fuelIdr,
     required this.tollIdr,
+    required this.fatigueAfter,
   });
 
   final RouteMode mode;
@@ -57,6 +61,9 @@ class DispatchQuote {
   final int revenueIdr;
   final int fuelIdr;
   final int tollIdr;
+
+  /// Kelelahan sopir saat kembali ke depot (≥ 1,0 = melewati batas jam mengemudi).
+  final double fatigueAfter;
 
   /// Barang selesai dibongkar di tujuan.
   int get deliveryEta => dispatchAt + beforeDepartureS + outboundS + unloadingS;

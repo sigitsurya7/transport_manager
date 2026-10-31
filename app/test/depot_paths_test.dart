@@ -101,8 +101,11 @@ void main() {
         var prev = pose(snap(phase, 0, slot: slot), dockLevel: 3, gateLevel: 3)!;
         for (var i = 1; i <= 400; i++) {
           final p = pose(snap(phase, i / 400, slot: slot), dockLevel: 3, gateLevel: 3)!;
-          expect(math.sqrt(math.pow(p.x - prev.x, 2) + math.pow(p.z - prev.z, 2)), lessThan(1.0),
-              reason: '$phase slot $slot @ $i');
+          expect(
+            math.sqrt(math.pow(p.x - prev.x, 2) + math.pow(p.z - prev.z, 2)),
+            lessThan(1.0),
+            reason: '$phase slot $slot @ $i',
+          );
           prev = p;
         }
       }

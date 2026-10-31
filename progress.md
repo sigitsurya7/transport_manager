@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 4 — business simulation berjalan** (rencana: `docs/TAHAP_4_RENCANA.md`). 4.1 perawatan kendaraan selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
+**Tahap 4 — business simulation berjalan** (rencana: `docs/TAHAP_4_RENCANA.md`). 4.1 perawatan kendaraan dan 4.2 karyawan selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -152,8 +152,17 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] UI: ketuk kendaraan di Armada → kondisi komponen, BBM aktual, tombol servis; mekanik tampil di samping kendaraan yang diservis.
 - [x] 74 test sim_core lulus (keausan, efek, bengkel luar, antrean bay, save/load, migrasi).
 
+### 2026-10-31 — Tahap 4.2: karyawan
+
+- [x] Sopir punya **skill** (0–100) yang naik seiring jam mengemudi. Sopir terampil lebih hemat BBM (hingga 12%) dan kendaraannya lebih awet (keausan hingga 35% lebih rendah). Estimasi dispatch tetap persis.
+- [x] **Gaji per sopir** ditetapkan saat direkrut dan naik mengikuti skill. Rekrut dari 3 **calon harian** (deterministik, berganti tiap hari). Sopir bisa diberhentikan, kecuali yang sedang bertugas atau sopir terakhir.
+- [x] **Kelelahan** bertambah saat mengemudi (batas 10 jam) dan pulih saat istirahat di depot (pulih penuh dalam 8 jam). Sopir yang mencapai batas **wajib istirahat** dan tidak bisa ditugaskan. Estimasi menampilkan kelelahan sopir saat kembali.
+- [x] **Mekanik** mempercepat servis di bengkel sendiri (maks. 2 per bay). Tanpa mekanik, servis lambat (×0,5). Mekanik tidak berpengaruh di bengkel luar. Mekanik ikut dihitung dalam kapasitas kantor dan gaji.
+- [x] UI Armada menampilkan sopir dengan skill, status, dan bar kelelahan. Ketuk sopir untuk melihat detail dan memberhentikan. Tersedia lembar calon sopir dan baris mekanik. Dispatch memperingatkan sopir yang wajib istirahat.
+- [x] Save lama mendapat nilai default (skill 40, tidak lelah, 0 mekanik). 86 test sim_core lulus.
+
 ## Berikutnya
 
 - [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.
 - [ ] Map pack 6 kota dari ekstrak Jawa (sudah terunduh) & verifikasi koordinat depot.
-- [ ] Tahap 4.2 karyawan → 4.3 kecelakaan & asuransi → 4.4 barang & kontrak → 4.5 supplier & gudang → 4.6 keuangan.
+- [ ] Tahap 4.3 kecelakaan & asuransi → 4.4 barang & kontrak → 4.5 supplier & gudang → 4.6 keuangan.

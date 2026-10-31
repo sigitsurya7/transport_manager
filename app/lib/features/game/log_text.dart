@@ -22,11 +22,16 @@ String logText(SimWorld world, WorldLogEntry e) {
     WorldLogKind.upgradeStarted => 'Konstruksi ${facility(d['facility'])} level ${d['level']} dimulai.',
     WorldLogKind.upgradeFinished => '${facility(d['facility'])} level ${d['level']} selesai dibangun.',
     WorldLogKind.vehiclePurchased => '${vehicle(d['vehicle'])} baru dibeli.',
-    WorldLogKind.employeeHired =>
-      d['role'] == 'driver'
-          ? 'Sopir baru ${world.drivers[d['driver']]?.name ?? ''} bergabung.'
-          : 'Staf gudang bertambah menjadi ${d['count']} orang.',
-    WorldLogKind.employeeReleased => 'Staf gudang berkurang menjadi ${d['count']} orang.',
+    WorldLogKind.employeeHired => switch (d['role']) {
+      'driver' => 'Sopir baru ${world.drivers[d['driver']]?.name ?? ''} bergabung.',
+      'mechanic' => 'Mekanik bertambah menjadi ${d['count']} orang.',
+      _ => 'Staf gudang bertambah menjadi ${d['count']} orang.',
+    },
+    WorldLogKind.employeeReleased => switch (d['role']) {
+      'driver' => 'Sopir ${d['name']} diberhentikan.',
+      'mechanic' => 'Mekanik berkurang menjadi ${d['count']} orang.',
+      _ => 'Staf gudang berkurang menjadi ${d['count']} orang.',
+    },
     WorldLogKind.maintenanceStarted =>
       '${vehicle(d['vehicle'])} masuk bengkel: ${world.content.maintenance.action(d['action']! as String).name.toLowerCase()}.',
     WorldLogKind.maintenanceFinished =>

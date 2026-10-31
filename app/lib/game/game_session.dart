@@ -291,9 +291,10 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   void startUpgrade(FacilityType type) => _command(() => world.startUpgrade(depot.id, type));
   void buyVehicle(String modelId) => _command(() => world.buyVehicle(depot.id, modelId));
-  void hire(EmployeeRole role) => _command(() => world.hire(depot.id, role));
+  void hire(EmployeeRole role, {int candidate = 0}) => _command(() => world.hire(depot.id, role, candidate: candidate));
+  void releaseStaff(EmployeeRole role) => _command(() => world.releaseStaff(depot.id, role));
+  void releaseDriver(int driverId) => _command(() => world.releaseDriver(driverId));
   void startMaintenance(int vehicleId, String actionId) => _command(() => world.startMaintenance(vehicleId, actionId));
-  void releaseWarehouseStaff() => _command(() => world.releaseWarehouseStaff(depot.id));
 
   void _command(void Function() action) {
     action();

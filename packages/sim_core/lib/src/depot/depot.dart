@@ -26,7 +26,7 @@ class FacilityConstruction {
       );
 }
 
-/// Depot perusahaan: fasilitas ber-level, slot parkir, staf gudang.
+/// Depot perusahaan: fasilitas ber-level, slot parkir, staf gudang, mekanik.
 class Depot {
   Depot({
     required this.id,
@@ -38,6 +38,7 @@ class Depot {
     Map<FacilityType, int>? levels,
     this.construction,
     this.warehouseStaff = 0,
+    this.mechanics = 0,
   })  : slots = slots ?? List<int?>.filled(parkingSlots, null, growable: true),
         levels = levels ?? {for (final t in FacilityType.values) t: 1} {
     if (this.slots.length != parkingSlots) {
@@ -61,6 +62,8 @@ class Depot {
   FacilityConstruction? construction;
 
   int warehouseStaff;
+
+  int mechanics;
 
   int get parkingSlots => slots.length;
 
@@ -87,6 +90,7 @@ class Depot {
         'levels': {for (final e in levels.entries) e.key.id: e.value},
         'construction': construction?.toJson(),
         'warehouse_staff': warehouseStaff,
+        'mechanics': mechanics,
       };
 
   /// Save format 1 belum punya level/staf: semua fasilitas level 1.
@@ -105,6 +109,7 @@ class Depot {
           ? null
           : FacilityConstruction.fromJson(j['construction'] as Map<String, dynamic>),
       warehouseStaff: j['warehouse_staff'] as int? ?? 0,
+      mechanics: j['mechanics'] as int? ?? 0,
     );
   }
 }

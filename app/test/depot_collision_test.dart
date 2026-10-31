@@ -97,8 +97,10 @@ void main() {
                   if (pose == null) return;
                   final h = hit(footprint(pose, bounds), obstacles);
                   if (h != null) {
-                    failures.add('dock L$dockLevel gate L$gateLevel parkir L$parkingLevel slot $slot '
-                        '${phase?.name ?? 'parkir'} dock=$dock jalur=$lane antre=$queue @${i / samples}: $h');
+                    failures.add(
+                      'dock L$dockLevel gate L$gateLevel parkir L$parkingLevel slot $slot '
+                      '${phase?.name ?? 'parkir'} dock=$dock jalur=$lane antre=$queue @${i / samples}: $h',
+                    );
                     return;
                   }
                   if (phase == null || phase.waiting || phase == TripPhase.loading) return;
@@ -141,9 +143,18 @@ void main() {
       for (final phase in [TripPhase.toDock, TripPhase.toGate, TripPhase.gateOut, TripPhase.gateIn, TripPhase.toSlot]) {
         for (var slot = 0; slot < 8; slot++) {
           for (var i = 0; i <= samples; i++) {
-            final pose = motion.pose(snap(phase, i / samples, slot: slot, dock: 0, lane: 0), dockLevel: 3, gateLevel: 1)!;
-            expect(hit(footprint(pose, pickup), {'konstruksi ${type.id}': [box]}), isNull,
-                reason: '${phase.name} slot $slot @${i / samples}');
+            final pose = motion.pose(
+              snap(phase, i / samples, slot: slot, dock: 0, lane: 0),
+              dockLevel: 3,
+              gateLevel: 1,
+            )!;
+            expect(
+              hit(footprint(pose, pickup), {
+                'konstruksi ${type.id}': [box],
+              }),
+              isNull,
+              reason: '${phase.name} slot $slot @${i / samples}',
+            );
           }
         }
       }

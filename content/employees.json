@@ -1,14 +1,36 @@
 {
-  "_comment": "Peran karyawan Tahap 3. Upah harian dibayar tiap pergantian hari game. Skill, kelelahan, mekanik, dispatcher di Tahap 4.",
+  "_comment": "Karyawan. Upah harian dibayar tiap pergantian hari game. Sopir punya skill (naik dengan jam mengemudi) & kelelahan (pulih saat istirahat di depot). Staf gudang & mekanik dihitung per depot.",
   "roles": [
-    {"id": "driver", "name": "Sopir", "daily_wage_idr": 160000},
-    {"id": "warehouse_staff", "name": "Staf gudang", "daily_wage_idr": 120000}
+    {"id": "driver", "name": "Sopir", "daily_wage_idr": 140000},
+    {"id": "warehouse_staff", "name": "Staf gudang", "daily_wage_idr": 120000},
+    {"id": "mechanic", "name": "Mekanik", "daily_wage_idr": 150000}
   ],
   "loading_staff_bonus": 0.3,
   "loading_staff_max_effective": 3,
   "loading_without_staff": 0.7,
+  "driver": {
+    "_comment": "wage = daily_wage × (1 + wage_per_skill × skill). Pemborosan BBM & keausan berkurang linear sampai 0 pada skill 1.",
+    "default_skill": 0.4,
+    "hire_skill_min": 0.15,
+    "hire_skill_max": 0.75,
+    "candidates": 3,
+    "skill_gain_per_hour": 0.004,
+    "wage_per_skill": 1.0,
+    "fuel_penalty_unskilled": 0.12,
+    "wear_penalty_unskilled": 0.35,
+    "max_driving_hours": 10,
+    "full_rest_hours": 8,
+    "tired_at": 0.7
+  },
+  "mechanic": {
+    "_comment": "Hanya berlaku di bengkel sendiri (bay > 0). Tanpa mekanik pekerjaan tetap jalan tapi lambat.",
+    "without_mechanic": 0.5,
+    "bonus_per_mechanic": 0.25,
+    "max_effective_per_bay": 2
+  },
   "names": [
     "Pak Slamet", "Budi", "Agus", "Dedi", "Joko", "Rudi", "Asep", "Wawan", "Hendra", "Yanto",
-    "Siti", "Dewi", "Rina", "Tono", "Ujang", "Bambang", "Eko", "Dadang", "Iwan", "Sri"
+    "Siti", "Dewi", "Rina", "Tono", "Ujang", "Bambang", "Eko", "Dadang", "Iwan", "Sri",
+    "Fajar", "Gilang", "Hadi", "Indra", "Kurnia", "Lukman", "Maman", "Nanang", "Oman", "Purnomo"
   ]
 }

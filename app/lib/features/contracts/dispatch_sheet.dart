@@ -5,6 +5,7 @@ import '../../widgets/game_icons.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
+import '../fleet/staff_section.dart' show formatSkill;
 
 Future<void> showDispatchSheet(BuildContext context, GameSession session, Contract contract) =>
     showModalBottomSheet<void>(
@@ -20,6 +21,7 @@ const _problemText = {
   DispatchProblem.vehicleBusy: 'Kendaraan sedang bertugas.',
   DispatchProblem.vehicleInWorkshop: 'Kendaraan sedang di bengkel.',
   DispatchProblem.driverBusy: 'Sopir sedang bertugas.',
+  DispatchProblem.driverNeedsRest: 'Sopir mencapai batas jam mengemudi dan wajib istirahat.',
   DispatchProblem.vehicleClassTooSmall: 'Kendaraan terlalu kecil untuk jangkauan kontrak ini.',
   DispatchProblem.overCapacity: 'Muatan melebihi kapasitas kendaraan.',
   DispatchProblem.noRoute: 'Tidak ada rute jalan ke tujuan untuk kendaraan ini.',
@@ -41,7 +43,7 @@ class _DispatchSheetState extends State<_DispatchSheet> {
     orElse: () => widget.session.world.vehicles.values.first,
   );
   late Driver _driver = widget.session.world.drivers.values.firstWhere(
-    (d) => d.isAvailable,
+    (d) => d.isAvailable && widget.session.world.driverFatigue(d.id) < 1,
     orElse: () => widget.session.world.drivers.values.first,
   );
   RouteMode? _mode;
@@ -92,8 +94,9 @@ class _DispatchSheetState extends State<_DispatchSheet> {
               icon: const GlyphIcon(GameGlyph.driver, size: 22),
               items: session.world.drivers.values.toList(),
               value: _driver,
-              label: (d) => d.name,
+              label: (d) => '${d.name} · skill ${formatSkill(d.skill)}',
               available: (d) => d.isAvailable,
+              note: (d) => session.world.driverFatigue(d.id) >= 1 ? ' · wajib istirahat' : null,
               onChanged: (d) => setState(() => _driver = d),
             ),
             const SizedBox(height: 16),
@@ -125,6 +128,7 @@ class _DispatchSheetState extends State<_DispatchSheet> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _QuoteCard(
                     quote: q,
+                    tiredAt: session.data.content.employees.driver.tiredAt,
                     timeScale: session.timeScale,
                     selected: q.mode == mode,
                     onTap: () => setState(() => _mode = q.mode),
@@ -155,9 +159,16 @@ class _DispatchSheetState extends State<_DispatchSheet> {
 }
 
 class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.quote, required this.timeScale, required this.selected, required this.onTap});
+  const _QuoteCard({
+    required this.quote,
+    required this.tiredAt,
+    required this.timeScale,
+    required this.selected,
+    required this.onTap,
+  });
 
   final DispatchQuote quote;
+  final double tiredAt;
   final int timeScale;
   final bool selected;
   final VoidCallback onTap;
@@ -221,6 +232,15 @@ class _QuoteCard extends StatelessWidget {
               ),
               line('Tenggat', formatGameTime(quote.deadline, fromSimSeconds: quote.dispatchAt)),
               line('Selesai total', '${formatDuration(total)} (≈ ${formatRealDuration(total, timeScale)} nyata)'),
+              line(
+                'Kelelahan sopir saat kembali',
+                '${(quote.fatigueAfter * 100).round()}%',
+                color: quote.fatigueAfter >= 1
+                    ? AppColors.negative
+                    : quote.fatigueAfter >= tiredAt
+                    ? AppColors.accent
+                    : null,
+              ),
               const Divider(height: 16),
               line('Pendapatan', formatRupiah(quote.revenueIdr)),
               line('BBM', '-${formatRupiah(quote.fuelIdr)}'),
@@ -247,6 +267,7 @@ class _Picker<T> extends StatelessWidget {
     required this.label,
     required this.available,
     required this.onChanged,
+    this.note,
   });
 
   final Widget icon;
@@ -255,6 +276,7 @@ class _Picker<T> extends StatelessWidget {
   final String Function(T) label;
   final bool Function(T) available;
   final ValueChanged<T> onChanged;
+  final String? Function(T)? note;
 
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<T>(
@@ -270,7 +292,10 @@ class _Picker<T> extends StatelessWidget {
       for (final item in items)
         DropdownMenuItem(
           value: item,
-          child: Text('${label(item)}${available(item) ? '' : ' · bertugas'}', overflow: TextOverflow.ellipsis),
+          child: Text(
+            '${label(item)}${available(item) ? note?.call(item) ?? '' : ' · bertugas'}',
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
     ],
     onChanged: (v) => v == null ? null : onChanged(v),

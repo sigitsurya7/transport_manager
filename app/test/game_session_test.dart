@@ -67,12 +67,7 @@ void main() {
     expect(vehicle.odometerM, greaterThan(0));
     await session.save();
 
-    final loaded = await GameSession.load(
-      data: data,
-      store: store,
-      bundle: rootBundle,
-      slotId: session.meta.slotId,
-    );
+    final loaded = await GameSession.load(data: data, store: store, bundle: rootBundle, slotId: session.meta.slotId);
     expect(loaded.world.cashIdr, world.cashIdr);
     expect(loaded.world.vehicles.values.single.odometerM, vehicle.odometerM);
     expect(loaded.world.contracts[offer.id]!.status, ContractStatus.delivered);

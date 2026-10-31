@@ -188,7 +188,7 @@ void main() {
       final w = newWorld();
       w.hire(1, EmployeeRole.warehouseStaff);
       final wage = w.content.employees.dailyWageIdr;
-      final perDay = wage[EmployeeRole.driver]! + wage[EmployeeRole.warehouseStaff]!;
+      final perDay = w.drivers.values.single.dailyWageIdr + wage[EmployeeRole.warehouseStaff]!;
       w.advanceTo(3 * SimWorld.daySeconds);
       expect(w.ledger.total(LedgerAccount.wages), -3 * perDay);
       // Hari 2 pukul 00.00 = detik 18 jam.

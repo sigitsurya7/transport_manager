@@ -152,7 +152,7 @@ enum UpgradeProblem { maxLevel, constructionBusy, insufficientCash }
 
 enum PurchaseProblem { noFreeSlot, insufficientCash, unknownModel }
 
-enum HireProblem { officeFull }
+enum HireProblem { officeFull, noCandidate }
 
 enum MaintenanceProblem { vehicleBusy, insufficientCash, notNeeded }
 
@@ -243,7 +243,19 @@ class SimWorld {
       vehicles: {
         vehicleId: Vehicle(id: vehicleId, model: model, depotId: depotId, slotIndex: 0),
       },
-      drivers: {driverId: Driver(id: driverId, name: driverName, depotId: depotId)},
+      drivers: {
+        driverId: Driver(
+          id: driverId,
+          name: driverName,
+          depotId: depotId,
+          skill: content.employees.driver.defaultSkill,
+          dailyWageIdr: content.employees.driver.wageIdr(
+            content.employees.dailyWageIdr[EmployeeRole.driver]!,
+            content.employees.driver.defaultSkill,
+          ),
+          restingSince: startTime,
+        ),
+      },
       contracts: {},
       trips: {},
       log: [],
@@ -290,9 +302,9 @@ class SimWorld {
   int gatePassS(Depot depot) => facility(depot, FacilityType.gate).intStat('pass_s');
   int staffMax(Depot depot) => facility(depot, FacilityType.office).intStat('staff_max');
 
-  /// Karyawan yang dihitung terhadap kapasitas kantor: sopir + staf gudang.
+  /// Karyawan yang dihitung terhadap kapasitas kantor: sopir, staf gudang, mekanik.
   int staffCount(Depot depot) =>
-      drivers.values.where((d) => d.depotId == depot.id).length + depot.warehouseStaff;
+      drivers.values.where((d) => d.depotId == depot.id).length + depot.warehouseStaff + depot.mechanics;
 
   /// Durasi muat di depot: dipercepat oleh level dock & jumlah staf gudang.
   int loadingS(Depot depot, int cargoKg) {
@@ -370,7 +382,7 @@ class SimWorld {
     final classFactor = content.maintenance.classCostFactor[vehicle.model.vehicleClass] ?? 1.0;
     return (
       costIdr: (action.costIdr * classFactor * shop.doubleStat('cost_factor')).round(),
-      durationS: (action.minutes * 60 / shop.doubleStat('speed')).round(),
+      durationS: (action.minutes * 60 / (shop.doubleStat('speed') * _mechanicFactor(_depot(vehicle.depotId)))).round(),
     );
   }
 
@@ -405,6 +417,12 @@ class SimWorld {
   }
 
   int workshopBays(Depot depot) => facility(depot, FacilityType.workshop).intStat('bays');
+
+  /// Mekanik hanya berpengaruh di bengkel sendiri; bengkel luar punya stafnya sendiri.
+  double _mechanicFactor(Depot depot) {
+    final bays = workshopBays(depot);
+    return bays == 0 ? 1.0 : content.employees.mechanicFactor(depot.mechanics, bays);
+  }
 
   void _serveWorkshop(Depot depot) {
     final jobs = vehicles.values
@@ -471,46 +489,105 @@ class SimWorld {
     return vehicle;
   }
 
-  List<HireProblem> hireProblems(int depotId) {
-    final depot = _depot(depotId);
-    return [if (staffCount(depot) >= staffMax(depot)) HireProblem.officeFull];
+  /// Calon sopir hari ini (deterministik per hari & depot; yang sudah
+  /// direkrut tidak muncul lagi).
+  List<DriverCandidate> driverCandidates(int depotId) {
+    final cfg = content.employees;
+    final rules = cfg.driver;
+    final day = (now + dayStartOffset) ~/ daySeconds;
+    final used = drivers.values.map((d) => d.name).toSet();
+    final result = <DriverCandidate>[];
+    for (var i = 0; i < rules.candidates; i++) {
+      final rng = DeterministicRng.derive(seed, depotId * 100000 + day, i);
+      final start = rng.nextInt(cfg.names.length);
+      final skill = rules.hireSkillMin + (rules.hireSkillMax - rules.hireSkillMin) * rng.nextDouble();
+      String? name;
+      for (var k = 0; k < cfg.names.length; k++) {
+        final n = cfg.names[(start + k) % cfg.names.length];
+        if (!used.contains(n) && !result.any((c) => c.name == n)) {
+          name = n;
+          break;
+        }
+      }
+      if (name == null) break;
+      final rounded = (skill * 100).round() / 100;
+      result.add(DriverCandidate(
+        name: name,
+        skill: rounded,
+        dailyWageIdr: rules.wageIdr(cfg.dailyWageIdr[EmployeeRole.driver]!, rounded),
+      ));
+    }
+    return result;
   }
 
-  /// Rekrut karyawan. Sopir mendapat nama dari daftar konten (deterministik).
-  void hire(int depotId, EmployeeRole role) {
-    final problems = hireProblems(depotId);
+  List<HireProblem> hireProblems(int depotId, {EmployeeRole role = EmployeeRole.warehouseStaff, int candidate = 0}) {
+    final depot = _depot(depotId);
+    return [
+      if (staffCount(depot) >= staffMax(depot)) HireProblem.officeFull,
+      if (role == EmployeeRole.driver && candidate >= driverCandidates(depotId).length) HireProblem.noCandidate,
+    ];
+  }
+
+  /// Rekrut karyawan. Sopir dipilih dari [driverCandidates] (indeks [candidate]).
+  void hire(int depotId, EmployeeRole role, {int candidate = 0}) {
+    final problems = hireProblems(depotId, role: role, candidate: candidate);
     if (problems.isNotEmpty) throw CommandException(problems);
     final depot = _depot(depotId);
     switch (role) {
       case EmployeeRole.driver:
+        final c = driverCandidates(depotId)[candidate];
         final id = _nextId++;
-        final names = content.employees.names;
-        final used = drivers.values.map((d) => d.name).toSet();
-        final rng = DeterministicRng.derive(seed, id, 0);
-        var name = names[rng.nextInt(names.length)];
-        for (var i = 0; i < names.length && used.contains(name); i++) {
-          name = names[(names.indexOf(name) + 1) % names.length];
-        }
-        drivers[id] = Driver(id: id, name: name, depotId: depot.id);
+        drivers[id] = Driver(
+          id: id,
+          name: c.name,
+          depotId: depot.id,
+          skill: c.skill,
+          dailyWageIdr: c.dailyWageIdr,
+          restingSince: now,
+        );
         _log(WorldLogKind.employeeHired, {'role': role.id, 'driver': id});
       case EmployeeRole.warehouseStaff:
         depot.warehouseStaff++;
         _log(WorldLogKind.employeeHired, {'role': role.id, 'count': depot.warehouseStaff});
+      case EmployeeRole.mechanic:
+        depot.mechanics++;
+        _log(WorldLogKind.employeeHired, {'role': role.id, 'count': depot.mechanics});
     }
   }
 
-  /// Berhentikan satu staf gudang (bila ada).
-  void releaseWarehouseStaff(int depotId) {
+  /// Berhentikan satu staf gudang / mekanik (bila ada).
+  void releaseStaff(int depotId, EmployeeRole role) {
     final depot = _depot(depotId);
-    if (depot.warehouseStaff == 0) return;
-    depot.warehouseStaff--;
-    _log(WorldLogKind.employeeReleased, {'role': EmployeeRole.warehouseStaff.id, 'count': depot.warehouseStaff});
+    switch (role) {
+      case EmployeeRole.warehouseStaff when depot.warehouseStaff > 0:
+        depot.warehouseStaff--;
+        _log(WorldLogKind.employeeReleased, {'role': role.id, 'count': depot.warehouseStaff});
+      case EmployeeRole.mechanic when depot.mechanics > 0:
+        depot.mechanics--;
+        _log(WorldLogKind.employeeReleased, {'role': role.id, 'count': depot.mechanics});
+      default:
+        break;
+    }
   }
+
+  /// Sopir bisa diberhentikan bila tidak bertugas dan bukan satu-satunya.
+  bool canReleaseDriver(int driverId) => _driver(driverId).isAvailable && drivers.length > 1;
+
+  void releaseDriver(int driverId) {
+    if (!canReleaseDriver(driverId)) throw ArgumentError.value(driverId, 'driverId', 'tidak bisa diberhentikan');
+    final d = drivers.remove(driverId)!;
+    _log(WorldLogKind.employeeReleased, {'role': EmployeeRole.driver.id, 'name': d.name});
+  }
+
+  double driverFatigue(int driverId) => _driver(driverId).fatigueAt(now, content.employees.driver);
 
   int dailyPayrollIdr() {
     final wage = content.employees.dailyWageIdr;
     final staff = depots.values.fold(0, (s, d) => s + d.warehouseStaff);
-    return drivers.length * wage[EmployeeRole.driver]! + staff * wage[EmployeeRole.warehouseStaff]!;
+    final mechanics = depots.values.fold(0, (s, d) => s + d.mechanics);
+    return drivers.values.fold(0, (s, d) => s + d.dailyWageIdr) +
+        staff * wage[EmployeeRole.warehouseStaff]! +
+        mechanics * wage[EmployeeRole.mechanic]!;
   }
 
   void _schedulePayroll() {
@@ -617,12 +694,13 @@ class SimWorld {
       if (vehicle.tripId != null) DispatchProblem.vehicleBusy,
       if (vehicle.maintenance != null) DispatchProblem.vehicleInWorkshop,
       if (!driver.isAvailable) DispatchProblem.driverBusy,
+      if (driver.isAvailable && driver.fatigueAt(now, content.employees.driver) >= 1) DispatchProblem.driverNeedsRest,
       if (!content.tierRules.canDispatch(contract.scope, vehicle.model.vehicleClass))
         DispatchProblem.vehicleClassTooSmall,
       if (contract.weightKg > vehicle.model.payloadKg) DispatchProblem.overCapacity,
     ];
-    final viaToll = _quote(contract, vehicle, RouteMode.toll);
-    final nonToll = _quote(contract, vehicle, RouteMode.nonToll);
+    final viaToll = _quote(contract, vehicle, driver, RouteMode.toll);
+    final nonToll = _quote(contract, vehicle, driver, RouteMode.nonToll);
     if (viaToll == null && nonToll == null) problems.add(DispatchProblem.noRoute);
     return DispatchCheck(problems: problems, viaToll: viaToll, nonToll: nonToll);
   }
@@ -660,7 +738,9 @@ class SimWorld {
       ..status = ContractStatus.inProgress
       ..deadline = quote.deadline;
     vehicle.tripId = trip.id;
-    driver.tripId = trip.id;
+    driver
+      ..fatigue = driver.fatigueAt(now, content.employees.driver)
+      ..tripId = trip.id;
     _log(WorldLogKind.dispatched, {
       'trip': trip.id,
       'contract': contractId,
@@ -672,7 +752,7 @@ class SimWorld {
     return trip;
   }
 
-  DispatchQuote? _quote(Contract contract, Vehicle vehicle, RouteMode mode) {
+  DispatchQuote? _quote(Contract contract, Vehicle vehicle, Driver driver, RouteMode mode) {
     final depot = _depot(vehicle.depotId);
     final loaded = vehicleProfile(vehicle, cargoKg: contract.weightKg);
     final empty = vehicleProfile(vehicle);
@@ -699,13 +779,16 @@ class SimWorld {
       dispatchAt: now,
       deadline: deadline,
       revenueIdr: contract.settlementAt(deliveryEta, deadline: deadline),
-      fuelIdr: _fuelIdr(vehicle, out.distanceM) + _fuelIdr(vehicle, back.distanceM),
+      fuelIdr: _fuelIdr(vehicle, driver, out.distanceM) + _fuelIdr(vehicle, driver, back.distanceM),
+      fatigueAfter: driver.fatigueAt(now, content.employees.driver) + content.employees.driver.fatigueFor(outS + backS),
       tollIdr: out.tollCostIdr + back.tollCostIdr,
     );
   }
 
-  int _fuelIdr(Vehicle vehicle, num distanceM) =>
-      content.economy.fuelCostIdr(distanceM.round().toDouble(), fuelLPer100Km(vehicle));
+  int _fuelIdr(Vehicle vehicle, Driver driver, num distanceM) => content.economy.fuelCostIdr(
+        distanceM.round().toDouble(),
+        fuelLPer100Km(vehicle) * content.employees.driver.fuelFactor(driver.skill),
+      );
 
   /// Konsumsi BBM aktual: naik bila mesin & ban aus.
   double fuelLPer100Km(Vehicle vehicle) {
@@ -793,8 +876,13 @@ class SimWorld {
         _finishLeg(trip.inbound, vehicle, driver, ref);
         // Keausan seluruh trip diterapkan setelah pulang agar biaya BBM kedua
         // leg sama persis dengan estimasi saat dispatch.
-        _wear(vehicle, trip.outbound.distanceM, contract.weightKg);
-        _wear(vehicle, trip.inbound.distanceM, 0);
+        _wear(vehicle, driver, trip.outbound.distanceM, contract.weightKg);
+        _wear(vehicle, driver, trip.inbound.distanceM, 0);
+        final rules = content.employees.driver;
+        driver.skill = math.min(
+          1.0,
+          driver.skill + rules.skillGainPerHour * (trip.outbound.durationS + trip.inbound.durationS) / 3600,
+        );
         _log(WorldLogKind.returnedToDepot, {'trip': trip.id, 'vehicle': vehicle.id});
         _enter(trip, TripPhase.waitGateIn);
         _serveGateQueue(depot);
@@ -806,7 +894,9 @@ class SimWorld {
         _enter(trip, TripPhase.inspection);
       case TripPhase.inspection:
         vehicle.tripId = null;
-        driver.tripId = null;
+        driver
+          ..tripId = null
+          ..restingSince = now;
         _log(WorldLogKind.tripCompleted, {'trip': trip.id, 'vehicle': vehicle.id});
         _enter(trip, TripPhase.completed);
         _tracks.remove((trip.id, true));
@@ -886,15 +976,18 @@ class SimWorld {
 
   void _finishLeg(TripLeg leg, Vehicle vehicle, Driver driver, String ref) {
     vehicle.odometerM += leg.distanceM;
-    driver.drivingSeconds += leg.durationS;
-    _postCost(LedgerAccount.fuel, _fuelIdr(vehicle, leg.distanceM), ref);
+    driver
+      ..drivingSeconds += leg.durationS
+      ..fatigue += content.employees.driver.fatigueFor(leg.durationS);
+    _postCost(LedgerAccount.fuel, _fuelIdr(vehicle, driver, leg.distanceM), ref);
   }
 
-  /// Keausan komponen sebanding jarak, lebih cepat saat bermuatan.
-  void _wear(Vehicle vehicle, int distanceM, int cargoKg) {
+  /// Keausan komponen sebanding jarak, lebih cepat saat bermuatan & bila
+  /// sopir kurang terampil.
+  void _wear(Vehicle vehicle, Driver driver, int distanceM, int cargoKg) {
     final m = content.maintenance;
     final load = (cargoKg / vehicle.model.payloadKg).clamp(0.0, 1.0);
-    final factor = distanceM / 1000 * (1 + m.loadedWearFactor * load);
+    final factor = distanceM / 1000 * (1 + m.loadedWearFactor * load) * content.employees.driver.wearFactor(driver.skill);
     for (final c in VehicleComponent.values) {
       vehicle.condition[c] = math.max(0, vehicle.condition[c]! - m.wearPer1000Km[c]! / 1000 * factor);
     }
@@ -1041,7 +1134,7 @@ class SimWorld {
       vehicles: {
         for (final v in rows('vehicles').map((r) => Vehicle.fromJson(r, content.vehicleModels))) v.id: v,
       },
-      drivers: {for (final d in rows('drivers').map(Driver.fromJson)) d.id: d},
+      drivers: {for (final d in rows('drivers').map((r) => Driver.fromJson(r, content.employees))) d.id: d},
       contracts: {for (final c in rows('contracts').map(Contract.fromJson)) c.id: c},
       trips: {for (final t in rows('trips').map(Trip.fromJson)) t.id: t},
       log: rows('log').map(WorldLogEntry.fromJson).toList(),

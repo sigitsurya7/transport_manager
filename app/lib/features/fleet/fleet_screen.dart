@@ -6,9 +6,10 @@ import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
 import '../contracts/trip_card.dart';
+import 'staff_section.dart';
 import 'vehicle_sheet.dart';
 
-/// Armada & karyawan: kendaraan, sopir, staf gudang, kapasitas kantor.
+/// Armada & karyawan: kendaraan, sopir, staf gudang, mekanik, kapasitas kantor.
 class FleetScreen extends StatelessWidget {
   const FleetScreen({super.key, required this.session});
 
@@ -20,7 +21,6 @@ class FleetScreen extends StatelessWidget {
     builder: (context, _) {
       final world = session.world;
       final depot = session.depot;
-      final cfg = session.data.content.employees;
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
@@ -47,62 +47,7 @@ class FleetScreen extends StatelessWidget {
               style: const TextStyle(color: AppColors.textMuted),
             ),
           ),
-          Card(
-            child: Column(
-              children: [
-                for (final d in world.drivers.values)
-                  ListTile(
-                    leading: const GlyphIcon(GameGlyph.driver, color: AppColors.accent),
-                    title: Text(d.name),
-                    subtitle: Text(
-                      d.isAvailable ? 'Sopir · siap' : 'Sopir · ${_tripStatus(world, d.tripId!)}',
-                      style: const TextStyle(color: AppColors.textMuted),
-                    ),
-                    trailing: Text(
-                      '${(d.drivingSeconds / 3600).toStringAsFixed(1).replaceAll('.', ',')} j',
-                      style: const TextStyle(color: AppColors.textMuted),
-                    ),
-                  ),
-                const Divider(),
-                ListTile(
-                  leading: const GlyphIcon(GameGlyph.staff, color: AppColors.accent),
-                  title: Text('Staf gudang: ${depot.warehouseStaff}'),
-                  subtitle: Text(
-                    'Muat ×${cfg.loadingFactor(depot.warehouseStaff).toStringAsFixed(1).replaceAll('.', ',')} '
-                    '(efektif s.d. ${cfg.loadingStaffMaxEffective} orang)',
-                    style: const TextStyle(color: AppColors.textMuted),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Berhentikan',
-                        onPressed: depot.warehouseStaff > 0 ? session.releaseWarehouseStaff : null,
-                        icon: const Icon(Icons.remove_circle_outline_rounded),
-                      ),
-                      IconButton(
-                        tooltip: 'Rekrut',
-                        onPressed: world.hireProblems(depot.id).isEmpty
-                            ? () => session.hire(EmployeeRole.warehouseStaff)
-                            : null,
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: world.hireProblems(depot.id).isEmpty ? () => session.hire(EmployeeRole.driver) : null,
-            icon: const GlyphIcon(GameGlyph.driver, size: 20, color: AppColors.accent),
-            label: Text(
-              world.hireProblems(depot.id).isEmpty
-                  ? 'Rekrut sopir (${formatRupiah(cfg.dailyWageIdr[EmployeeRole.driver]!)}/hari)'
-                  : 'Kantor penuh: upgrade kantor',
-            ),
-          ),
+          StaffSection(session: session),
           const SizedBox(height: 12),
           Text(
             'Gaji harian total ${formatRupiah(world.dailyPayrollIdr())} · dibayar tiap pukul 00.00',
@@ -112,11 +57,6 @@ class FleetScreen extends StatelessWidget {
       );
     },
   );
-
-  static String _tripStatus(SimWorld world, int tripId) {
-    final trip = world.trips[tripId];
-    return trip == null ? 'bertugas' : phaseLabel[trip.phase]!.toLowerCase();
-  }
 }
 
 class _Header extends StatelessWidget {
