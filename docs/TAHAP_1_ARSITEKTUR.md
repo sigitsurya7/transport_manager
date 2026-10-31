@@ -121,7 +121,9 @@ Routing dikerjakan **di Dart sendiri**, bukan engine eksternal (OSRM/Valhalla/Gr
 - **A\*** dengan heuristik jarak haversine dibagi kecepatan maksimum (admissible).
 - Biaya edge = waktu tempuh untuk *profil kendaraan* (truk lebih lambat, dilarang di jalan dengan batas berat, opsi hindari tol).
 - Dijalankan di **Isolate** agar UI tidak tersendat.
-- Hasil rute di-cache per (asal, tujuan, profil) di DB save.
+- **Pilihan rute tol vs non-tol:** untuk setiap dispatch dihitung dua kandidat — *via tol* (biaya edge tol normal) dan *non-tol* (edge tol dilarang). Pemain melihat keduanya berdampingan: jarak, waktu tempuh, biaya tol, estimasi BBM, dan indikator risiko (jalan non-tol cenderung lebih lambat, lebih banyak persimpangan, tanjakan/turunan). Contoh: Jakarta → Bandung via tol ±2 jam (±12 menit nyata) vs non-tol yang lebih lama tetapi tanpa biaya tol.
+- Tarif tol dari data per ruas di map pack (golongan kendaraan menentukan tarif); bila belum ada data tarif resmi, pakai tarif per km per golongan sebagai pendekatan dan tandai di manifest.
+- Hasil rute di-cache per (asal, tujuan, profil kendaraan, mode tol) di DB save.
 - Jika graph Jawa penuh terlalu besar untuk A* polos: tambah **Contraction Hierarchies** di pipeline (keputusan ditunda sampai benchmark Tahap 2).
 
 Kendaraan bergerak dengan menginterpolasi posisi sepanjang polyline rute berdasarkan waktu simulasi — tidak pernah garis lurus.
@@ -280,8 +282,8 @@ Saat **dibuka:**
 2. **Validasi waktu:**
    - Jika boot sama dan |Δwall − Δmono| besar → jam perangkat diubah; pakai Δmono.
    - Jika Δwall negatif → Δ = 0 (waktu tidak mundur), catat anomali.
-   - **Batas catch-up 48 jam nyata** (= 4 jam 48 menit waktu game); sisa waktu di atas batas diabaikan, bukan "dihukum".
-3. Konversi ke waktu game: **10 menit nyata = 1 menit game** (`timeScale = 0.1`, disimpan di konfigurasi, bukan hardcode).
+   - **Batas catch-up 48 jam nyata** (= 480 jam / 20 hari waktu game); sisa waktu di atas batas diabaikan, bukan "dihukum".
+3. Konversi ke waktu game: **1 menit nyata = 10 menit game** (`timeScale = 10`, disimpan di konfigurasi, bukan hardcode). Pengali kecepatan opsional (2×–10×) **tidak** berlaku untuk catch-up offline.
 4. Jalankan event queue sampai `now` (batch, di Isolate, dengan progress bar jika lama).
 5. **Kebijakan anti-hukuman:** selama offline, kendaraan yang menganggur tidak mengambil kontrak baru; kontrak berulang yang terlewat dibatalkan tanpa penalti berat; kas tidak boleh membuat perusahaan bangkrut hanya karena offline (gaji ditangguhkan, bukan pailit instan).
 6. Tampilkan ringkasan dari `event_log`.
@@ -302,6 +304,17 @@ Saat **dibuka:**
 | Early | Pikap losbak, pikap box, mini truck (setara kelas Carry/L300/Gran Max) | Parking 3→6, gudang kecil, 1 dock | Retail, minuman |
 | Mid | Light truck (CDE/CDD), medium truck (engkel/fuso ringan) | Workshop, dock 2–3, office (dispatcher), cold storage | Bahan bangunan, pertanian, pendingin |
 | Late | Heavy rigid (tronton), tractor head + trailer, container, lowbed | Trailer yard, heavy workshop, depot kedua | Kontainer, barang khusus, berat |
+
+**Jangkauan pengiriman per kelas kendaraan (disetujui):**
+
+| Jenis pengiriman | Jangkauan | Kendaraan minimal |
+|---|---|---|
+| Toko ke toko / distribusi retail | Dalam kota saja (jarak dekat) | Pikap losbak / pikap box |
+| Distribusi kawasan | Dalam kota sampai pinggiran / kota tetangga dekat | Pikap box atau mini truck |
+| Antarkota | Keluar kota, mis. Jakarta → Bandung | **Mini truck ke atas** (light truck, medium, dst.) |
+| Antarprovinsi / jarak jauh | Lintas beberapa ibu kota | Light/medium truck ke atas; heavy & trailer di late game |
+
+Aturan ini dipaksakan di sisi kontrak: kontrak antarkota tidak bisa di-dispatch dengan pikap, dan papan kontrak menampilkan kelas kendaraan minimal. Batasnya data-driven (`contract_tiers.json`: radius kota, kelas minimal), bukan hardcode.
 
 Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesifikasi realistis untuk kelasnya. Kompatibilitas body dan barang didefinisikan di katalog (`vehicle_class → allowed_bodies`, `cargo → required_body/temperature/hazard`).
 
@@ -348,20 +361,29 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 |---|---|---|
 | 1 | Engine 3D | Terbaik & terbaru: **flutter_scene** (Flutter master dipin via FVM), fallback **Thermion**; diverifikasi lewat spike 2a |
 | 2 | Kota awal | Dipilih pemain; tersedia 6 ibu kota provinsi Jawa: Jakarta, Serang, Bandung, Semarang, Yogyakarta, Surabaya |
-| 3 | Skala waktu | **10 menit nyata = 1 menit game** (`timeScale = 0.1`); catch-up offline maks **48 jam nyata** |
+| 3 | Skala waktu | **1 menit nyata = 10 menit game** (`timeScale = 10`); catch-up offline maks **48 jam nyata** |
+| 6 | Rute | Pemain memilih rute **tol atau non-tol** per dispatch |
+| 7 | Jangkauan pengiriman | Toko ke toko hanya dalam kota (pikap); antarkota minimal mini truck |
+| 8 | Percepatan waktu 2×–10× | Arsitektur disiapkan, **belum diterapkan**; kelak dibuka via micro-transaction atau rewarded ads |
 | 4 | Repo | Monorepo `app/` + `packages/` + `tools/` |
 | 5 | State management | Riverpod |
 
 ### Dampak skala waktu terhadap desain
 
-Dengan `timeScale = 0.1`, waktu game berjalan 10× lebih lambat dari dunia nyata:
+Dengan `timeScale = 10`, waktu game berjalan 10× lebih cepat dari dunia nyata:
 
 | Kejadian (waktu game) | Durasi nyata |
 |---|---|
-| Bongkar muat 15 menit | 2,5 jam |
-| Pengiriman dalam kota ~1 jam | 10 jam |
-| Jakarta → Bandung ~3 jam | 30 jam |
-| Satu hari game (gaji harian) | 10 hari |
-| Catch-up maks 48 jam nyata | 4 jam 48 menit game |
+| Bongkar muat 15 menit | 1,5 menit |
+| Pengiriman toko ke toko dalam kota ~30–60 menit | 3–6 menit |
+| Jakarta → Bandung via tol ~2 jam | ~12 menit |
+| Satu hari game | 2 jam 24 menit |
+| Catch-up maks 48 jam nyata | 20 hari game |
 
-Konsekuensi yang harus ditangani di desain: tempo per-pengiriman menjadi panjang, sehingga gaji, sewa, dan premi perlu dihitung per jam game (bukan per hari) agar ekonomi tetap terasa; dan perlu diputuskan apakah pemain boleh mempercepat waktu saat bermain aktif (usulan: ya, opsi 2×–10×). `timeScale` dibuat konfigurasi agar mudah di-tuning setelah playtest.
+### Percepatan waktu (disiapkan, belum diterapkan)
+
+- `SimClock` menerima `speedMultiplier` (default 1×). Nilai yang diizinkan datang dari interface `SpeedEntitlementProvider`.
+- Implementasi saat ini: `FreeSpeedEntitlement` yang selalu mengembalikan 1×. Tidak ada SDK iklan atau billing yang dipasang.
+- Kelak: implementasi berbasis in-app purchase atau rewarded ads (misal 2×/5×/10× selama durasi tertentu) bisa ditambahkan tanpa mengubah simulation core.
+- Percepatan hanya berlaku saat bermain aktif; catch-up offline tetap memakai skala dasar dan batas 48 jam, sehingga monetisasi tidak bisa dipakai untuk mengakali simulasi offline.
+- Karena game harus 100% offline, verifikasi pembelian/iklan nantinya perlu mekanisme yang tetap berjalan tanpa koneksi (entitlement tersimpan lokal) — dicatat sebagai keputusan desain terpisah saat fitur ini dibuat.
