@@ -49,9 +49,6 @@ def fenders(m: MeshBuilder, xs, half, r, mat="chassis"):
             m.box("rubber", (x - r - 0.12, r + 0.1, s * half), (0.03, 0.5, 0.32))
 
 
-def shadow(m: MeshBuilder, x0, x1, width):
-    m.box("shadow", ((x0 + x1) / 2, 0.012, 0), (x1 - x0, 0.004, width + 0.06))
-
 
 def plate(m: MeshBuilder, x, y, front: bool):
     m.box("plate", (x + (0.012 if front else -0.012), y, 0), (0.02, 0.15, 0.48))
@@ -427,7 +424,6 @@ def trailer(m: MeshBuilder, kind, x0, length, livery, opened):
     fenders(m, (x0 + 2.3,), 1.0, 0.48)
     side_guard(m, x0 + 4.4, x1 - 3.6, 1.2)
     taillights(m, x0, 1.0, y=0.9)
-    shadow(m, x0, x1, 2.5)
     w = 2.5
     if kind == "trailer_container":
         for s in (-1, 1):
@@ -541,7 +537,6 @@ def build_vehicle(model: dict, cat: dict, opened: bool = False):
                 m.box("frame", (x0 + 0.1, floor + 1.55, 0), (0.05, 0.05, bw))
             slots = _slots(x0 + 0.08, x1 - (0.5 if utility else 0.08), fl, bw - 0.12)
         taillights(m, x0, bw / 2 - 0.12, y=floor + 0.25)
-        shadow(m, x0, front, width)
         return _finish(m, slots)
 
     if chassis.startswith("van"):
@@ -586,7 +581,6 @@ def build_vehicle(model: dict, cat: dict, opened: bool = False):
         taillights(m, x0, hw - 0.08, y=1.0)
         axle_r = x0 + bl * 0.28 if not dual else x0 + bl * 0.3
         wheels(m, (front - nose - 0.3 if nose > 0.6 else front - 0.65, axle_r), hw - 0.12, r, dual=dual)
-        shadow(m, x0, front, width)
         slots = _slots(x0 + 0.06, x1 - 0.06, 0.45, width - 0.12)
         return _finish(m, slots)
 
@@ -616,7 +610,6 @@ def build_vehicle(model: dict, cat: dict, opened: bool = False):
         wheels(m, (fx,), 1.0, 0.52)
         for s in (-1, 1):
             fuel_tank(m, cab_x + 0.2, s * 1.05 if s > 0 else -1.0, r=0.3, length=1.2)
-        shadow(m, x0, front, 2.5)
         if floor is not None and body["doors"]:
             slots = _slots(x0 + 0.15, x1 - 0.2, floor + 0.05, 2.3)
         return _finish(m, slots)
@@ -648,7 +641,6 @@ def build_vehicle(model: dict, cat: dict, opened: bool = False):
         side_guard(m, max(rear_axles) + r + 0.15, front_axles[-1] - r - 0.15, width / 2)
     m.box("chassis", (x0 - 0.04, floor - 0.25, 0), (0.1, 0.24, width - 0.1))                     # bumper belakang
     taillights(m, x0 - 0.02, width / 2 - 0.15, y=floor - 0.1)
-    shadow(m, x0, front, width)
     stripe = livery if livery not in ("body_white", "silver") else "stripe"
     h_box = {"mini_cabover": 2.1, "boxcar_semi": 1.9, "light_cabover": 2.3, "medium_cabover": 2.55,
              "heavy_cabover": 2.7, "mini_cabover_k": 1.5}[chassis]

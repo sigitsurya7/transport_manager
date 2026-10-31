@@ -80,6 +80,9 @@ class _DepotScreenState extends State<DepotScreen> {
   /// Staf gudang: (tangan kosong, memanggul kardus); satu tampil, satu disembunyikan.
   final List<(Node, Node)> _staff = [];
 
+  /// Lampu lantai per slot parkir: (kosong, terisi).
+  final List<(Node, Node)> _slotMarkers = [];
+
   /// Mekanik yang bekerja di samping kendaraan yang sedang diservis.
   final List<Node> _mechanics = [];
 
@@ -181,6 +184,13 @@ class _DepotScreenState extends State<DepotScreen> {
       if (current != null) _scene.remove(current.$2);
       _scene.add(node);
       _modules[type] = (model, node);
+    }
+    while (_slotMarkers.length < layout.slots.length) {
+      final pair = (await _instance('slot_free'), await _instance('slot_taken'));
+      _scene
+        ..add(pair.$1)
+        ..add(pair.$2);
+      _slotMarkers.add(pair);
     }
     final gateLevel = depot.level(FacilityType.gate);
     if (_boomLevel != gateLevel) {
@@ -293,6 +303,7 @@ class _DepotScreenState extends State<DepotScreen> {
       _animateBooms(boomOpen);
       _placeStaging(snaps, motion.layout.docks(dockLevel));
       _placeMechanics(motion, snaps, elapsed.inMicroseconds / 1e6);
+      _placeSlotMarkers(motion);
       _animatePeople(motion, elapsed.inMicroseconds / 1e6, dockLevel, gateLevel, loadingDocks);
     }
     return PerspectiveCamera(
@@ -362,6 +373,21 @@ class _DepotScreenState extends State<DepotScreen> {
     }
     for (var i = used; i < _staging.length; i++) {
       _place(_staging[i], null);
+    }
+  }
+
+  /// Slot milik kendaraan (termasuk yang sedang bertugas) menyala oranye,
+  /// slot kosong hijau; slot di luar kapasitas parkir saat ini tidak tampil.
+  void _placeSlotMarkers(DepotMotion motion) {
+    final z = motion.layout.slotMarkerZ;
+    for (var i = 0; i < _slotMarkers.length; i++) {
+      final (free, taken) = _slotMarkers[i];
+      final active = i < depot.parkingSlots;
+      final occupied = active && depot.slots[i] != null;
+      final s = motion.layout.slots[i];
+      final pose = (x: s.x, z: z, heading: 0.0);
+      _place(free, active && !occupied ? pose : null);
+      _place(taken, occupied ? pose : null);
     }
   }
 

@@ -161,8 +161,21 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] UI Armada menampilkan sopir dengan skill, status, dan bar kelelahan. Ketuk sopir untuk melihat detail dan memberhentikan. Tersedia lembar calon sopir dan baris mekanik. Dispatch memperingatkan sopir yang wajib istirahat.
 - [x] Save lama mendapat nilai default (skill 40, tidak lelah, 0 mekanik). 86 test sim_core lulus.
 
+### 2026-10-31 — Katalog kendaraan diperluas & perombakan visual depot
+
+- [x] Katalog modular **40 model** dalam 8 kategori (pikap 6, van 4, truk mini 4, truk ringan 7, truk sedang 5, khusus 4, truk berat 5, tractor 5): 19 sasis + 39 bodi/semitrailer/kontainer dengan validasi kompatibilitas di `sim_core` (`VehicleCatalog`).
+- [x] 7 jenis muatan. Dispatch menolak bodi yang tidak cocok; tawaran kontrak mengikuti kemampuan armada. Barang baru: makanan beku, semen, pasir, air curah, mobil, kayu gelondong.
+- [x] Syarat beli: level parkir (truk sedang L2, crane & truk kayu L3). Truk berat & tractor butuh **terminal truk** (belum ada), jadi tampil terkunci di dealer.
+- [x] Generator modular (`geom.py`, `vehicles.py`) + thumbnail PNG dari mesh yang sama (`thumbs.py`). Semua aset orisinal, tanpa aset pihak ketiga. Dimensi katalog diuji sama dengan model 3D.
+- [x] Jalur depot menyesuaikan panjang kendaraan. Uji tabrakan untuk 30 kendaraan depot lulus di semua level fasilitas.
+- [x] Dealer baru: chip kategori, kartu spesifikasi (muatan, BBM, biaya BBM/100 km, servis, P×L×T, kecepatan, golongan tol, jenis muatan, status kunci), dan mode tabel perbandingan.
+- [x] Perombakan visual depot: panel lantai, marka, polisi tidur, pagar BRC, dock seal & bollard, rusuk gudang & talang & skylight, kantor 1–3 lantai, papan nama, props keselamatan, dan lampu lantai slot (hijau kosong / oranye terisi). Tetap mulai dari 3 slot.
+- [x] Test: sim_core 94, generator 8, app 47 lulus; `flutter analyze` bersih. Diuji di HP: depot baru, dealer (kartu & tabel), pembelian truk sedang flatbed lalu parkir di slot 5.
+- Detail & cara menambah kendaraan: `docs/KATALOG_KENDARAAN.md`.
+
 ## Berikutnya
 
 - [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.
 - [ ] Map pack 6 kota dari ekstrak Jawa (sudah terunduh) & verifikasi koordinat depot.
+- [ ] Terminal truk (lahan & slot panjang untuk truk berat/tractor + trailer berartikulasi).
 - [ ] Tahap 4.3 kecelakaan & asuransi → 4.4 barang & kontrak → 4.5 supplier & gudang → 4.6 keuangan.

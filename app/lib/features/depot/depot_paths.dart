@@ -44,6 +44,9 @@ class DepotLayout {
   double get roadLaneZ => (json['road_lane_z'] as num).toDouble();
   List<FloorPoint> get slots => [for (final s in json['parking_slots'] as List) _pt(s)];
 
+  /// Posisi z lampu lantai di mulut slot parkir.
+  double get slotMarkerZ => (json['slot_marker_z'] as num).toDouble();
+
   List<FloorPoint> docks(int level) => [for (final d in (json['docks'] as Map)['$level'] as List) _pt(d)];
 
   List<double> gateLanes(int level) => [

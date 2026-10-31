@@ -62,6 +62,8 @@ LAYOUT = {
               {"hinge": (4.65, GATE_Z), "model": "boom_short_r", "side": -1}],
     },
     # Titik penanda konstruksi per fasilitas (di luar jalur kendaraan).
+    # Penanda slot di lantai mulut slot (di belakang kendaraan yang parkir).
+    "slot_marker_z": SLOT_Z + 3.45,
     "anchors": {
         "parking": (-24.0, -12.0),
         "workshop": (-7.75, -12.5),
@@ -103,15 +105,26 @@ def house(m: MeshBuilder, x, z, w, d, wall):
 
 
 def fence_run(m: MeshBuilder, x0, z0, x1, z1):
+    """Pagar BRC: plinth beton, tiang, dua rel, jeruji tiap 1,2 m, kawat atas."""
     length = math.hypot(x1 - x0, z1 - z0)
-    n = max(1, int(length // 3.5))
+    along_x = abs(x1 - x0) > abs(z1 - z0)
+    cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+
+    def run(y, h, t):
+        m.box("precast" if y < 0.5 else "fence", (cx, y, cz), (length, h, t) if along_x else (t, h, length))
+
+    run(0.22, 0.44, 0.16)
+    n = max(1, int(length // 2.4))
     for i in range(n + 1):
         t = i / n
-        m.box_on_ground("fence", x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, (0.12, 1.9, 0.12))
-    cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
-    along_x = abs(x1 - x0) > abs(z1 - z0)
-    for y in (0.7, 1.6):
-        m.box("fence", (cx, y, cz), (length, 0.06, 0.06) if along_x else (0.06, 0.06, length))
+        m.box_on_ground("fence", x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, (0.1, 2.1, 0.1))
+    for y in (0.95, 1.85):
+        run(y, 0.05, 0.05)
+    run(2.12, 0.02, 0.02)
+    bars = int(length // 1.2)
+    for i in range(1, bars):
+        t = i / bars
+        m.box("fence", (x0 + (x1 - x0) * t, 1.4, z0 + (z1 - z0) * t), (0.025, 0.9, 0.025))
     m.block(x0 - 0.08, z0 - 0.08, x1 + 0.08, z1 + 0.08)
 
 
@@ -151,6 +164,35 @@ def build_base() -> MeshBuilder:
         tree(m, x, ROAD_Z + 6.5, 0.9, light=x > 0)
     for x, w, d, wall in [(-36, 9, 7, "house_a"), (-22, 8, 7, "house_b"), (21, 9, 7, "house_c"), (35, 8, 7, "house_a")]:
         house(m, x, ROAD_Z + 11.5, w, d, wall)
+    # panel beton lantai (garis sambungan tiap 5 m), tertutup aspal & slot di atasnya
+    for x in range(-15, 20, 5):
+        m.box("panel_line", (x, 0.021, 0), (0.05, 0.004, 30))
+    for z in range(-10, 15, 5):
+        m.box("panel_line", (0, 0.021, z), (40, 0.004, 0.05))
+    # marka putus-putus tengah jalur & panah arah keluar/masuk dekat gerbang
+    for i in range(-9, 10):
+        m.box("marking", (i * 2.0 + 1.0, 0.045, LANE_Z), (1.0, 0.01, 0.12))
+    for x, d in ((3.0, 1), (-3.0, -1)):
+        tip = (x, 0.046, 12.0 + 1.2 * d)
+        m.solid("marking", [[(x - 0.55, 0.046, 12.0), (x + 0.55, 0.046, 12.0), tip],
+                            [(x - 0.55, 0.05, 12.0), (x + 0.55, 0.05, 12.0), (tip[0], 0.05, tip[2])]])
+        m.box("marking", (x, 0.046, 12.0 - 0.9 * d), (0.25, 0.01, 1.8))
+    # penyeberangan pejalan kaki kantor ↔ gudang
+    for i in range(6):
+        m.box("marking", (-8.5, 0.045, 3.6 + i * 1.0), (2.2, 0.01, 0.5))
+    # polisi tidur di dalam gerbang (dilindas, bukan rintangan)
+    for i in range(10):
+        m.box("marking_y" if i % 2 == 0 else "hazard", (-4.5 + i * 1.0, 0.06, 10.4), (1.0, 0.05, 0.45))
+    # rambu batas kecepatan & arah di dalam gerbang
+    m.box_on_ground("pole", 9.4, 14.3, (0.08, 2.2, 0.08))
+    m.cylinder("gate_red", (9.4, 2.15, 14.24), 0.32, 0.03, axis="z", sides=12)
+    m.cylinder("sign_white", (9.4, 2.15, 14.22), 0.25, 0.03, axis="z", sides=12)
+    m.block_box(9.4, 14.3, 0.2, 0.2)
+    # pagar tanaman di dalam pagar utara (timur) & lampu tambahan di belakang
+    m.box_on_ground("leaf", 17.2, 14.62, (4.4, 0.75, 0.36))
+    m.box_on_ground("planter", 17.2, 14.62, (4.5, 0.3, 0.42))
+    m.block(14.95, 14.4, 19.45, 14.85)
+    lamp(m, 1.0, -14.4, 1.0)
     return m
 
 
@@ -179,6 +221,13 @@ def build_parking(level: int) -> MeshBuilder:
         fence_run(m, -30, -15, -20, -15)
         lamp(m, -28.8, 12.0)
         lamp(m, -28.8, -9.5)
+    for i in range(count):                                   # kepala slot bergaris kuning-hitam
+        for k in range(4):
+            m.box("marking_y" if k % 2 == 0 else "hazard", (SLOTS[i][0] - 0.6 + k * 0.4, 0.13, SLOT_Z - 3.3),
+                  (0.4, 0.02, 0.21))
+    if level >= 2:                                           # garis tepi kuning + papan "P"
+        m.box("marking_y", ((west + east) / 2, 0.052, SLOT_Z - 3.7), (east - west, 0.01, 0.12))
+        m.box("marking_y", ((west + east) / 2, 0.052, SLOT_Z + 3.7), (east - west, 0.01, 0.12))
     return m
 
 
@@ -218,6 +267,9 @@ def build_gate(level: int) -> MeshBuilder:
             m.box_on_ground("pole", x, GATE_Z + 1.8, (0.18, 4.6, 0.18))
             m.block_box(x, GATE_Z + 1.8, 0.18, 0.18)
         m.box("marking", (0, 0.05, 12.0), (0.15, 0.01, 6.0))
+    for x, label in ((-px, "sign_blue"), (px, "sign_blue")):
+        m.box(label, (x, 2.75 if level == 1 else 3.45, GATE_Z + 0.33), (0.55, 0.38, 0.02))
+        m.box("sign_white", (x, 2.75 if level == 1 else 3.45, GATE_Z + 0.345), (0.4, 0.06, 0.01))
     return m
 
 
@@ -257,6 +309,22 @@ def build_dock(level: int) -> MeshBuilder:
         m.box_on_ground("wood", 19.05, pz, (0.95, 0.14, 0.95))
         m.box_on_ground("carton", 19.05, pz, (0.85, 0.55 + 0.2 * (i % 2), 0.85), y0=0.14)
         m.block_box(19.05, pz, 0.95, 0.95)
+    for x in xs:
+        for dx in (-1.85, 1.85):                                 # dock seal hitam di sisi & atas pintu
+            m.box_on_ground("seal", x + dx, FACADE_Z + 0.15, (0.3, 3.9, 0.22))
+        m.box("seal", (x, 3.95, FACADE_Z + 0.15), (4.0, 0.3, 0.22))
+        m.box("pole", (x + 2.15, 3.3, FACADE_Z + 0.3), (0.06, 0.06, 0.5))   # lampu dock
+        m.box("lamp", (x + 2.15, 3.25, FACADE_Z + 0.55), (0.25, 0.15, 0.15))
+        for dx in (-1.75, 1.75):                                 # bollard kuning di tepi platform
+            m.cylinder("marking_y", (x + dx, 1.45, PLATFORM_EDGE_Z - 0.15), 0.09, 0.7, sides=8)
+        if level >= 2:                                           # lampu lalu lintas dock
+            m.box("frame", (x - 2.2, 2.6, FACADE_Z + 0.08), (0.25, 0.6, 0.12))
+            m.box("light_green", (x - 2.2, 2.75, FACADE_Z + 0.15), (0.14, 0.14, 0.02))
+            m.box("light_red", (x - 2.2, 2.47, FACADE_Z + 0.15), (0.14, 0.14, 0.02))
+    if level >= 2:                                               # tumpukan palet kosong
+        for i in range(4):
+            m.box_on_ground("wood", 19.05, -5.6, (0.95, 0.12, 0.95), y0=i * 0.14)
+        m.block_box(19.05, -5.6, 0.95, 0.95)
     return m
 
 
@@ -295,6 +363,32 @@ def build_warehouse(level: int) -> MeshBuilder:
             for y in (1.0, 2.1):
                 m.box_on_ground("carton", x, wz - 2.7 + i * 2.7, (1.0, 0.7, 2.0), y0=y)
         m.block(wx - ww / 2 - 2.0, wz - 3.8, wx - ww / 2, wz + 3.8)
+    for i in range(int(wd) + 1):                                 # rusuk dinding samping
+        for sx in (-1, 1):
+            m.box("wall_rib", (wx + sx * (ww / 2 + 0.02), 0.6 + (wh - 0.6) / 2, FACADE_Z - 0.3 - i * (wd - 0.6) / int(wd)),
+                  (0.04, wh - 0.6, 0.1))
+    for i in range(int(ww / 1.2) + 1):                           # rusuk fasad di atas pintu dock
+        m.box("wall_rib", (wx - ww / 2 + 0.2 + i * (ww - 0.4) / int(ww / 1.2), (4.0 + wh) / 2, FACADE_Z + 0.02),
+              (0.1, wh - 4.0, 0.04))
+    for sz in (-1, 1):                                           # talang & pipa turun
+        ez = wz + sz * (wd / 2 + 0.6)
+        m.box("frame", (wx, wh - 0.05, ez), (ww + 0.8, 0.14, 0.14))
+        for sx in (-1, 1):
+            m.box_on_ground("frame", wx + sx * (ww / 2 + 0.3), ez - sz * 0.45, (0.1, wh, 0.1))
+    for i in range(3):                                           # ventilasi bubungan
+        m.cylinder("silver", (wx - ww / 3 + i * ww / 3, wh + 2.0, wz), 0.25, 0.4, sides=8)
+    m.box("sign_blue", (wx, wh - 1.1, FACADE_Z + 0.05), (5.0, 0.8, 0.04))     # papan nama
+    m.box("sign_white", (wx, wh - 1.1, FACADE_Z + 0.075), (4.2, 0.18, 0.01))
+    m.box_on_ground("door", wx - ww / 2 - 0.03, wz + 2.6, (0.05, 2.1, 1.0))    # pintu orang + kanopi kecil
+    m.box("roof_dark", (wx - ww / 2 - 0.4, 2.35, wz + 2.6), (0.8, 0.08, 1.4))
+    if level >= 2:                                               # skylight di atap selatan
+        rise, hz = 1.8, (wd + 1.2) / 2
+        for i in range(3):
+            xa, xb = wx - ww / 2 + 1.5 + i * (ww - 3) / 3, wx - ww / 2 + 1.5 + i * (ww - 3) / 3 + 1.6
+            def pt(x, t, off):
+                return (x, wh + rise * t + 0.03 + off, wz + hz - hz * t)
+            m.solid("glass", [[pt(xa, 0.25, 0), pt(xb, 0.25, 0), pt(xb, 0.7, 0), pt(xa, 0.7, 0)],
+                              [pt(xa, 0.25, 0.04), pt(xb, 0.25, 0.04), pt(xb, 0.7, 0.04), pt(xa, 0.7, 0.04)]])
     return m
 
 
@@ -375,6 +469,23 @@ def build_workshop(level: int) -> MeshBuilder:
         for x in (x0 + 0.6, x1 - 0.6):
             m.box_on_ground("frame", x, z1 - 0.6, (0.25, 0.8, 0.25), y0=h + 0.24)
     m.block(x0 - 0.05, z0 - 0.05, x1 + 1.05, z1 + 0.1)
+    for i in range(3):                                           # drum oli di sisi timur
+        m.cylinder("drum_blue", (x1 + 0.5 + (i % 2) * 0.6, 0.45, -13.6 + (i // 2) * 0.6), 0.28, 0.9, sides=10)
+    m.box("sign_blue", (cx, h - 0.9, z1 + 0.05), (3.6, 0.6, 0.04))
+    m.box("sign_white", (cx, h - 0.9, z1 + 0.075), (2.8, 0.14, 0.01))
+    for i in range(int(x1 - x0) + 1):
+        m.box("wall_rib", (x0 + 0.1 + i * (x1 - x0 - 0.2) / int(x1 - x0), 0.5 + (h - 0.5) / 2, z0 - 0.02),
+              (0.1, h - 0.5, 0.04))
+    return m
+
+
+def build_slot_marker(taken: bool) -> MeshBuilder:
+    """Lampu lantai di mulut slot parkir: hijau = kosong, oranye = terisi."""
+    m = MeshBuilder()
+    mat = "slot_taken" if taken else "slot_free"
+    m.box(mat, (0, 0.06, 0), (2.4, 0.02, 0.22))
+    for dx in (-1.35, 1.35):
+        m.box(mat, (dx, 0.07, 0), (0.22, 0.04, 0.22))
     return m
 
 
@@ -541,6 +652,21 @@ def build_props() -> MeshBuilder:
         m.box_on_ground("concrete", x, 15.9, (1.2, 0.45, 0.6))
         m.cone("leaf_light", x, 15.9, 0.45, 0.5, 0.55, sides=6, top_radius=0.2)
         m.block(x - 0.6, 15.6, x + 0.6, 16.2)
+    # --- pembatas keselamatan kuning-hitam di depan kantor (di dalam tapak kantor)
+    for i in range(8):
+        m.box_on_ground("marking_y" if i % 2 == 0 else "hazard", -17.6 + i * 1.0, 9.6, (1.0, 0.12, 0.1), y0=0.55)
+    for x in (-18.1, -14.1, -10.1):
+        m.box_on_ground("hazard", x, 9.6, (0.12, 0.7, 0.12))
+    # --- tumpukan palet & kardus di sisi barat daya (dekat kontainer bekas)
+    for i, (px, pz) in enumerate(((-19.0, -12.0), (-19.0, -13.2))):
+        m.box_on_ground("wood", px, pz, (0.95, 0.12, 0.95))
+        m.box_on_ground("carton" if i else "carton_light", px, pz, (0.85, 0.7, 0.85), y0=0.12)
+    m.block(-19.5, -13.7, -18.5, -11.5)
+    # --- pot tanaman di sisi kantor
+    for x in (-19.2, -19.2):
+        m.box_on_ground("planter", x, 13.8, (0.6, 0.45, 0.6))
+        m.cone("leaf", x, 13.8, 0.45, 0.4, 0.8, sides=6, top_radius=0.1)
+    m.block(-19.5, 13.5, -18.9, 14.1)
     return m
 
 
@@ -583,6 +709,8 @@ def models() -> dict:
         out[name] = build_vehicle(name)[0]
         if name in VEHICLES_WITH_DOORS:
             out[f"{name}_open"] = build_vehicle(name, True)[0]
+    out["slot_free"] = build_slot_marker(False)
+    out["slot_taken"] = build_slot_marker(True)
     out["cargo_crate"] = build_cargo_crate()
     out["worker"] = build_worker()
     out["worker_carry"] = build_worker(carry=True)
@@ -597,10 +725,10 @@ def bounds_xz(builder: MeshBuilder):
 
 
 # Anggaran segitiga (diuji) agar aset tetap ringan di HP kelas menengah.
-BUDGET = {"base": 6000, "props": 4000, "depot": 12000, "construction": 400, "worker": 300,
-          "worker_carry": 400, "cargo_crate": 200}
+BUDGET = {"base": 9000, "props": 4800, "depot": 16000, "construction": 400, "worker": 300,
+          "worker_carry": 400, "cargo_crate": 200, "slot_free": 60, "slot_taken": 60}
 VEHICLE_BUDGET = 1600
-MODULE_BUDGET = 2500
+MODULE_BUDGET = 3500
 
 
 def budget(name: str) -> int:
