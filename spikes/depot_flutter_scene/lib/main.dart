@@ -55,6 +55,14 @@ class _DepotSpikeState extends State<DepotSpike> {
     }
     sw.stop();
     if (mounted) setState(() => _loadMs = sw.elapsedMilliseconds);
+    if (autoBenchEnabled && _error == null) {
+      await runAutoBenchmark(
+        engine: 'flutter_scene',
+        stats: stats,
+        loadTimeMs: sw.elapsedMilliseconds,
+        setVehicles: _setVehicleCount,
+      );
+    }
   }
 
   Future<void> _setVehicleCount(int count) async {

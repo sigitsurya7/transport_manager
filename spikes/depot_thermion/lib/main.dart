@@ -53,6 +53,14 @@ class _DepotSpikeState extends State<DepotSpike> with SingleTickerProviderStateM
     }
     sw.stop();
     if (mounted) setState(() => _loadMs = sw.elapsedMilliseconds);
+    if (autoBenchEnabled && _error == null) {
+      await runAutoBenchmark(
+        engine: 'Thermion',
+        stats: stats,
+        loadTimeMs: sw.elapsedMilliseconds,
+        setVehicles: _setVehicleCount,
+      );
+    }
   }
 
   /// Update transform setiap frame. Panggilan Thermion asinkron, jadi frame

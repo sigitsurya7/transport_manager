@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 2a — kode spike selesai dan lolos compile (analyze + test), menunggu pengukuran di HP Android.** Tahap 1 selesai dan disetujui.
+**Tahap 2a — flutter_scene terukur di HP dan lolos; Thermion & benchmark routing data nyata tertunda.** Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -57,10 +57,18 @@ Selesai:
 
 Kendala di komputer dev: Python 3 belum terpasang (pipeline peta & pembuat GLB), lisensi Android SDK belum diterima, tidak ada HP terhubung.
 
-## Berikutnya — sisa Tahap 2a (butuh HP / komputer dev)
+### 2026-10-31 — Tahap 2a (spike di HP)
 
-- [ ] Pasang Python 3 (+ `pip install osmium`), terima lisensi: `flutter doctor --android-licenses`.
-- [ ] Jalankan `setup.sh` kedua spike (membuat `assets/*.glb`), jalankan di HP Android, isi tabel di `spikes/README.md`, putuskan engine final.
-- [ ] Jalankan `fetch_java.sh` + `build_spike_packs.sh`, lalu `route_bench.dart` untuk angka routing nyata (Jakarta–Bandung tol vs non-tol).
+- [x] Test Python lulus semua (pipeline 13, GLB 3); perbaikan test SQLite yang gagal di Windows.
+- [x] **flutter_scene di REDMI Note 15 (Helio G99, 8 GB, layar 120 Hz)**: load 228 ms; 1 / 10 / 30 kendaraan = 71–89 / 71–88 / 60–76 fps, jank ≈ 0 %; APK arm64 19,0 MB. **Lolos kriteria dengan margin besar.** Rincian di `spikes/README.md`.
+- [x] Benchmark otomatis tanpa sentuh layar (`--dart-define=AUTO_BENCH=true`, hasil di `adb logcat`).
+- [x] `setup.sh` spike: tidak lagi menimpa `lib/main.dart` bila proyek Android sudah ada; file bawaan `flutter create` dibersihkan.
+- [ ] **Thermion**: build gagal karena binary Filament diunduh dari `*.r2.dev`, dan domain itu diblokir DNS ISP. Butuh VPN/DNS lain, atau putuskan flutter_scene tanpa pembanding.
+- [x] `fetch_overpass.sh` + `merge_osm.py` (unduh jalan per ubin + retry, lalu gabung) sebagai alternatif ekstrak Jawa ±900 MB.
+- [~] **Benchmark routing data nyata ditunda atas permintaan user** (koneksi ±40 KB/s). Unduhan Geofabrik dijeda di 264/899 MB (lanjutkan dengan `curl -C -`); 4 dari 9 ubin koridor Jakarta–Bandung tersimpan di `raw/tiles`. Logika estimasi waktu tempuh akan ditinjau bersama user.
+
+## Berikutnya
+
+- [ ] Keputusan engine final (rekomendasi: flutter_scene).
 - [ ] Verifikasi koordinat kandidat depot.
-- [ ] Setelah itu: **Tahap 2b — core prototype**.
+- [ ] **Tahap 2b — core prototype**, mulai dari bagian yang tidak bergantung engine 3D.

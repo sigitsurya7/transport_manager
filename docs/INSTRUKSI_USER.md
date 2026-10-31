@@ -45,3 +45,18 @@ Interpretasi yang dipakai: perjalanan nyata 2 jam = 12 menit waktu main, artinya
 
 > Baca MANUAL_INSTRUCTION.md dan progress.md sebelum melanjutkan.
 > Jika sudah lanjutkan pengerjaan.
+
+## 2026-10-31 — HP terhubung
+
+> Aku sudah menghubungkan HP Android, jadi kau bisa menjalankan spike.
+> Aku sudah menjalankan 1 sampai point ke dua
+
+## 2026-10-31 — Data peta kecil untuk benchmark routing
+
+> Pakai data yang lebih kecil untuk benchmark routing.
+
+## 2026-10-31 — Lewati benchmark routing
+
+> Jika masih lama skip saja pengantarannya atau mengukur waktu tempuhnya. Nanti ku carikan logic yang bagus. Sekarang kerjakan yang lain saja
+
+Interpretasi: benchmark routing dengan data nyata ditunda (unduhan Overpass dihentikan; ubin yang sudah lengkap disimpan). Logika estimasi waktu tempuh akan ditinjau ulang bersama user.

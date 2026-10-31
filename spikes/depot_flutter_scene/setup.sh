@@ -2,10 +2,12 @@
 # Siapkan proyek Android spike flutter_scene. Jalankan dari folder ini.
 set -euo pipefail
 flutter --version | head -1
-[ -d android ] || flutter create --platforms=android --project-name depot_flutter_scene .
-# flutter create menimpa lib/main.dart & test bawaan: kembalikan milik kita
-git checkout -- lib/main.dart 2>/dev/null || true
-rm -f test/widget_test.dart
+if [ ! -d android ]; then
+  flutter create --platforms=android --project-name depot_flutter_scene .
+  # flutter create menimpa lib/main.dart & menambah file bawaan: kembalikan milik kita
+  git checkout -- lib/main.dart
+  rm -f test/widget_test.dart analysis_options.yaml README.md .gitignore
+fi
 # Aktifkan Flutter GPU
 MANIFEST=android/app/src/main/AndroidManifest.xml
 python3 - "$MANIFEST" <<'PY'

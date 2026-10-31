@@ -88,6 +88,8 @@ class GraphTest(unittest.TestCase):
             self.assertEqual(con.execute("SELECT COUNT(*) FROM edges WHERE toll=1").fetchone()[0], 1)
             geom = con.execute("SELECT geometry FROM edges WHERE toll=1").fetchone()[0]
             self.assertEqual(len(br.decode_polyline(geom)), 3)
+            # Windows tidak bisa menghapus file SQLite yang masih terbuka.
+            con.close()
             with open(os.path.join(d, "graph.json")) as f:
                 g = json.load(f)
             self.assertEqual(len(g["nodes"]), 4)
