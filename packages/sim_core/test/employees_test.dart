@@ -119,7 +119,7 @@ void main() {
       expect(w.maintenanceQuote(vehicleId, 'tires').durationS, outside,
           reason: 'bengkel luar: mekanik tidak berpengaruh');
       w.releaseStaff(1, EmployeeRole.mechanic);
-      w.advanceTo(w.startUpgrade(1, FacilityType.workshop).finishAt);
+      upgradeTo(w, FacilityType.workshop, levelWith(w, FacilityType.workshop, 'bays', 1));
       final none = w.maintenanceQuote(vehicleId, 'tires').durationS;
       w.hire(1, EmployeeRole.mechanic);
       final one = w.maintenanceQuote(vehicleId, 'tires').durationS;

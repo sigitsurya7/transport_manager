@@ -1,5 +1,5 @@
 {
-  "_comment": "Parameter ekonomi prototipe. Uang dalam rupiah (integer). Nilai sementara agar ekspansi Tahap 3 terjangkau; diseimbangkan ulang di Tahap 4.",
+  "_comment": "Parameter ekonomi prototipe. Uang dalam rupiah (integer). Nilai sementara agar ekspansi Tahap 3 terjangkau; diseimbangkan ulang di Tahap 4. goods: harga jual barang ke toko & diskon grosir isi stok. agreement: kontrak berulang. vehicle_market: penyusutan, jual ke dealer, pasar bekas.",
   "starting_cash_idr": 150000000,
   "fuel_price_idr_per_l": 10000,
   "contract": {
@@ -9,5 +9,41 @@
     "deadline_slack": 2.0,
     "deadline_min_s": 10800,
     "late_penalty_per_hour_pct": 10
+  },
+  "goods": {
+    "store_markup_pct": 15,
+    "restock_discount_pct": 8
+  },
+  "agreement": {
+    "interval_days": [
+      1,
+      2,
+      3,
+      7
+    ],
+    "runs_min": 4,
+    "runs_max": 12,
+    "pay_discount_pct": 10,
+    "retry_s": 1800,
+    "grace_s": 10800,
+    "max_missed": 3,
+    "cancel_penalty_pct": 100
+  },
+  "vehicle_market": {
+    "start_year": 2026,
+    "first_year_drop_pct": 15,
+    "depreciation_per_year_pct": 10,
+    "odometer_life_km": 900000,
+    "condition_weight_pct": 40,
+    "floor_pct": 10,
+    "dealer_buy_pct": 85,
+    "used_markup_pct": 10,
+    "used_listings": 4,
+    "used_age_min": 1,
+    "used_age_max": 12,
+    "used_km_per_year_min": 20000,
+    "used_km_per_year_max": 60000,
+    "used_condition_min": 0.45,
+    "used_condition_max": 0.95
   }
 }

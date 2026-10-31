@@ -39,7 +39,9 @@ class Depot {
     this.construction,
     this.warehouseStaff = 0,
     this.mechanics = 0,
-  })  : slots = slots ?? List<int?>.filled(parkingSlots, null, growable: true),
+    Map<String, int>? stock,
+  })  : stock = stock ?? {},
+        slots = slots ?? List<int?>.filled(parkingSlots, null, growable: true),
         levels = levels ?? {for (final t in FacilityType.values) t: 1} {
     if (this.slots.length != parkingSlots) {
       throw ArgumentError('Jumlah slot tidak cocok: ${this.slots.length} ≠ $parkingSlots');
@@ -64,6 +66,21 @@ class Depot {
   int warehouseStaff;
 
   int mechanics;
+
+  /// Stok gudang: id barang → jumlah unit (hanya yang > 0).
+  final Map<String, int> stock;
+
+  int stockOf(String cargoId) => stock[cargoId] ?? 0;
+
+  void addStock(String cargoId, int units) {
+    final v = stockOf(cargoId) + units;
+    if (v < 0) throw StateError('Stok $cargoId negatif');
+    if (v == 0) {
+      stock.remove(cargoId);
+    } else {
+      stock[cargoId] = v;
+    }
+  }
 
   int get parkingSlots => slots.length;
 
@@ -91,6 +108,7 @@ class Depot {
         'construction': construction?.toJson(),
         'warehouse_staff': warehouseStaff,
         'mechanics': mechanics,
+        'stock': stock,
       };
 
   /// Save format 1 belum punya level/staf: semua fasilitas level 1.
@@ -110,6 +128,7 @@ class Depot {
           : FacilityConstruction.fromJson(j['construction'] as Map<String, dynamic>),
       warehouseStaff: j['warehouse_staff'] as int? ?? 0,
       mechanics: j['mechanics'] as int? ?? 0,
+      stock: {...?(j['stock'] as Map?)?.cast<String, int>()},
     );
   }
 }

@@ -4,6 +4,7 @@
 /// rendering, maupun database.
 library;
 
+export 'src/contracts/agreement.dart';
 export 'src/contracts/contract.dart';
 export 'src/contracts/contract_tiers.dart';
 export 'src/depot/depot.dart';
@@ -33,6 +34,7 @@ export 'src/vehicle/vehicle.dart';
 export 'src/vehicle/vehicle_catalog.dart';
 export 'src/vehicle/vehicle_class.dart';
 export 'src/vehicle/vehicle_profile.dart';
+export 'src/vehicle/vehicle_valuation.dart';
 export 'src/world/game_content.dart';
 export 'src/world/sim_world.dart';
 export 'src/world/world_log.dart';

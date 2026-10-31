@@ -1,0 +1,59 @@
+{
+  "_comment": "Template supplier (fiktif). Setiap depot mendapat semua supplier ini di kotanya, lokasinya dipilih deterministik dari seed di jalan nyata 2-12 km dari depot. sells = id barang di cargo_types.json.",
+  "suppliers": [
+    {
+      "name": "Gudang Beras Mang Engking",
+      "sells": [
+        "beras_25",
+        "minyak_goreng",
+        "mi_instan"
+      ]
+    },
+    {
+      "name": "Distributor Air Tirta Abadi",
+      "sells": [
+        "air_galon"
+      ]
+    },
+    {
+      "name": "Agen Sembako Sentosa",
+      "sells": [
+        "minyak_goreng",
+        "mi_instan",
+        "beras_25"
+      ]
+    },
+    {
+      "name": "Toko Bangunan Kokoh Jaya",
+      "sells": [
+        "semen_40",
+        "pasir"
+      ]
+    },
+    {
+      "name": "Cold Storage Segar Beku",
+      "sells": [
+        "frozen_food"
+      ]
+    },
+    {
+      "name": "Depo Pasir & Air Sumber Alam",
+      "sells": [
+        "pasir",
+        "air_bersih"
+      ]
+    },
+    {
+      "name": "Dealer Mobil Maju Motor",
+      "sells": [
+        "mobil_unit"
+      ]
+    },
+    {
+      "name": "Sawmill Rimba Lestari",
+      "sells": [
+        "kayu_log"
+      ]
+    }
+  ]
+}

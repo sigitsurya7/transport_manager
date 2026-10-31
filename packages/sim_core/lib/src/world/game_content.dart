@@ -1,3 +1,4 @@
+import '../contracts/agreement.dart';
 import '../contracts/contract.dart';
 import '../contracts/contract_tiers.dart';
 import '../depot/facilities.dart';
@@ -21,6 +22,7 @@ class GameContent {
     required this.facilities,
     required this.employees,
     required this.maintenance,
+    this.suppliers = const [],
   });
 
   /// [files]: isi JSON per nama file di `content/`.
@@ -37,6 +39,10 @@ class GameContent {
       facilities: FacilityCatalog.fromJson(f('facilities.json')),
       employees: EmployeeConfig.fromJson(f('employees.json')),
       maintenance: MaintenanceConfig.fromJson(f('maintenance.json')),
+      suppliers: [
+        for (final s in (f('suppliers.json')['suppliers'] as List).cast<Map<String, dynamic>>())
+          SupplierTemplate.fromJson(s),
+      ],
     );
     if (content.storeCustomers.isEmpty) throw const FormatException('Daftar pelanggan kosong');
     if (content.cargoTypes.isEmpty) throw const FormatException('Katalog barang kosong');
@@ -44,6 +50,11 @@ class GameContent {
       final f = m.unlock.facilityId;
       if (f != null && m.unlock.level > content.facilities[FacilityType.parse(f)].maxLevel) {
         throw FormatException('Model ${m.id}: syarat $f level ${m.unlock.level} melebihi level maksimum');
+      }
+    }
+    for (final s in content.suppliers) {
+      for (final id in s.sells) {
+        if (!content.cargoTypes.containsKey(id)) throw FormatException('Supplier ${s.name}: barang tidak dikenal $id');
       }
     }
     for (final c in content.cargoTypes.values) {
@@ -64,6 +75,7 @@ class GameContent {
     'facilities.json',
     'employees.json',
     'maintenance.json',
+    'suppliers.json',
   ];
 
   final ContractTierRules tierRules;
@@ -76,4 +88,7 @@ class GameContent {
   final FacilityCatalog facilities;
   final EmployeeConfig employees;
   final MaintenanceConfig maintenance;
+
+  /// Template supplier (`suppliers.json`).
+  final List<SupplierTemplate> suppliers;
 }

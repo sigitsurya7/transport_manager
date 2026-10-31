@@ -84,7 +84,8 @@ void main() {
         world.advanceTo(trip.phaseEnd);
       }
       // Dock & gerbang kosong: fase antrean dilewati tanpa menunggu.
-      expect(seen, TripPhase.values.where((p) => p != TripPhase.completed && !p.waiting).toList());
+      expect(seen, trip.plan.where((p) => p != TripPhase.completed && !p.waiting).toList());
+      expect(trip.plan, TripPlans.depotLoad, reason: 'kontrak lama: muat di depot');
     });
 
     test('posisi di jalan mengikuti rute: berangkat dari depot, tiba di tujuan', () {
@@ -142,7 +143,7 @@ void main() {
       final c = addContract(world, destinationNode: 7); // ujung baris 0, sejajar ruas tol
       final check = world.check(contractId: c.id, vehicleId: vehicleId, driverId: driverId);
       final toll = check.viaToll!, free = check.nonToll!;
-      expect(toll.outboundRoute.usesToll, isTrue);
+      expect(toll.outboundRoute!.usesToll, isTrue);
       expect(toll.tollIdr, greaterThan(0));
       expect(free.tollIdr, 0);
       expect(toll.outboundS, lessThan(free.outboundS));

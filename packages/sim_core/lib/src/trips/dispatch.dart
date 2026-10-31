@@ -1,4 +1,6 @@
+import '../contracts/contract.dart';
 import '../routing/route_planner.dart';
+import 'trip.dart';
 
 /// Alasan dispatch ditolak.
 enum DispatchProblem {
@@ -21,15 +23,24 @@ enum DispatchProblem {
   /// Bodi kendaraan tidak sanggup mengangkut jenis barang ini (mis. barang beku tanpa box berpendingin).
   cargoIncompatible,
 
-  /// Tidak ada rute pergi atau pulang untuk kendaraan ini.
+  /// Tidak ada rute untuk salah satu leg.
   noRoute,
+
+  /// Kas tidak cukup untuk membeli barang di supplier.
+  insufficientCash,
+
+  /// Isi stok: ruang gudang tidak cukup.
+  warehouseFull,
+
+  /// Kendaraan lain ditetapkan untuk kontrak berulang ini.
+  wrongVehicle,
 }
 
 /// Estimasi lengkap satu pilihan rute, ditampilkan sebelum pemain menerima.
 class DispatchQuote {
   const DispatchQuote({
     required this.mode,
-    required this.outboundRoute,
+    required this.plan,
     required this.inboundRoute,
     required this.outboundS,
     required this.inboundS,
@@ -42,19 +53,34 @@ class DispatchQuote {
     required this.fuelIdr,
     required this.tollIdr,
     required this.fatigueAfter,
+    this.outboundRoute,
+    this.pickupRoute,
+    this.pickupS = 0,
+    this.pickupLoadingS = 0,
+    this.purchaseIdr = 0,
+    this.stockValueIdr = 0,
+    this.fulfillment,
   });
 
   final RouteMode mode;
-  final Route outboundRoute;
+  final List<TripPhase> plan;
+
+  /// Depot → supplier (bila ada penjemputan).
+  final Route? pickupRoute;
+
+  /// Ke tujuan; `null` untuk isi stok.
+  final Route? outboundRoute;
   final Route inboundRoute;
+  final int pickupS;
+  final int pickupLoadingS;
   final int outboundS;
   final int inboundS;
 
-  /// Slot → dock → muat → gerbang.
+  /// Di depot sebelum lewat gerbang (slot → [dock → muat] → gerbang).
   final int beforeDepartureS;
   final int unloadingS;
 
-  /// Gerbang masuk → slot → inspeksi.
+  /// Gerbang masuk → slot (→ bongkar ke gudang) → inspeksi.
   final int afterReturnS;
 
   final int dispatchAt;
@@ -65,18 +91,31 @@ class DispatchQuote {
   final int fuelIdr;
   final int tollIdr;
 
+  /// Modal membeli barang di supplier.
+  final int purchaseIdr;
+
+  /// Nilai (harga grosir) stok gudang yang dipakai pesanan ini; informasi saja,
+  /// tidak memengaruhi kas.
+  final int stockValueIdr;
+
+  /// Sumber barang pesanan toko.
+  final Fulfillment? fulfillment;
+
   /// Kelelahan sopir saat kembali ke depot (≥ 1,0 = melewati batas jam mengemudi).
   final double fatigueAfter;
 
-  /// Barang selesai dibongkar di tujuan.
-  int get deliveryEta => dispatchAt + beforeDepartureS + outboundS + unloadingS;
+  /// Barang selesai dibongkar di tujuan (isi stok: selesai dimuat di supplier).
+  int get deliveryEta => dispatchAt + beforeDepartureS + pickupS + pickupLoadingS + outboundS + unloadingS;
 
   /// Kendaraan siap dipakai lagi.
   int get completionEta => deliveryEta + inboundS + afterReturnS;
 
   bool get onTime => deliveryEta <= deadline;
-  int get distanceM => (outboundRoute.distanceM + inboundRoute.distanceM).round();
-  int get costIdr => fuelIdr + tollIdr;
+  int get distanceM =>
+      ((pickupRoute?.distanceM ?? 0) + (outboundRoute?.distanceM ?? 0) + inboundRoute.distanceM).round();
+  bool get usesToll =>
+      (pickupRoute?.usesToll ?? false) || (outboundRoute?.usesToll ?? false) || inboundRoute.usesToll;
+  int get costIdr => fuelIdr + tollIdr + purchaseIdr;
   int get profitIdr => revenueIdr - costIdr;
 }
 

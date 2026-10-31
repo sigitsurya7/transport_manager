@@ -14,6 +14,18 @@ enum WorldLogKind {
   payrollPaid,
   maintenanceStarted,
   maintenanceFinished,
+
+  /// Barang dimuat di supplier.
+  pickedUp,
+
+  /// Barang isi stok masuk gudang.
+  restocked,
+  vehicleSold,
+  agreementOffered,
+  agreementAccepted,
+  agreementRunMissed,
+  agreementCancelled,
+  agreementFinished,
 }
 
 /// Satu baris log. Teks untuk pemain disusun UI dari [kind] + [data]

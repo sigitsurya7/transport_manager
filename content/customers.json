@@ -1,11 +1,14 @@
 {
-  "_comment": "Nama pelanggan template untuk kontrak toko ke toko (fiktif). Jenis pelanggan lain ditambah di Tahap 4.",
+  "_comment": "Nama pelanggan template (fiktif) untuk tujuan jasa angkut & pesanan toko.",
   "store_to_store": [
     "Toko Kelontong Sumber Rejeki",
     "Minimarket Sinar Jaya",
     "Toko Sembako Barokah",
     "Warung Makmur",
     "Toko Grosir Mitra Usaha",
-    "Agen Air Galon Tirta Segar"
+    "Agen Air Galon Tirta Segar",
+    "Warung Mang Ujang",
+    "Toko Indojuni",
+    "Kios Bu Imas"
   ]
 }

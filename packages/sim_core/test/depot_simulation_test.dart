@@ -106,10 +106,9 @@ void main() {
       w.ledger.post(LedgerEntry(time: 0, account: LedgerAccount.wages, amountIdr: -w.cashIdr, ref: 'test'));
       expect(w.upgradeProblems(1, FacilityType.gate), [UpgradeProblem.insufficientCash]);
       expect(() => w.startUpgrade(1, FacilityType.gate), throwsA(isA<CommandException>()));
-      addCash(w, 1000000000);
-      for (var i = 0; i < 2; i++) {
-        w.advanceTo(w.startUpgrade(1, FacilityType.gate).finishAt);
-      }
+      addCash(w, 100000000000);
+      upgradeTo(w, FacilityType.gate, w.content.facilities[FacilityType.gate].maxLevel);
+      expect(w.depots[1]!.level(FacilityType.gate), 15);
       expect(w.upgradeProblems(1, FacilityType.gate), [UpgradeProblem.maxLevel]);
     });
   });
@@ -132,7 +131,7 @@ void main() {
 
     test('upgrade ke 2 dock menghapus antrean dock', () {
       final f = fleet(2);
-      f.world.advanceTo(f.world.startUpgrade(1, FacilityType.loadingDock).finishAt);
+      upgradeTo(f.world, FacilityType.loadingDock, levelWith(f.world, FacilityType.loadingDock, 'docks', 2));
       dispatchAll(f.world, f.vehicles, f.drivers, f.contracts);
       expect(tripOf(f.world, f.vehicles[0]).phase, TripPhase.toDock);
       expect(tripOf(f.world, f.vehicles[1]).phase, TripPhase.toDock);
@@ -141,7 +140,7 @@ void main() {
 
     test('gerbang 1 jalur: kendaraan lewat gerbang bergantian', () {
       final f = fleet(2);
-      f.world.advanceTo(f.world.startUpgrade(1, FacilityType.loadingDock).finishAt);
+      upgradeTo(f.world, FacilityType.loadingDock, levelWith(f.world, FacilityType.loadingDock, 'docks', 2));
       dispatchAll(f.world, f.vehicles, f.drivers, f.contracts);
       final gateOut = phaseStarts(f.world, TripPhase.gateOut, 6 * 3600);
       final times = gateOut.values.toList()..sort();

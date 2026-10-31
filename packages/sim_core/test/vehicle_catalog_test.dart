@@ -95,6 +95,9 @@ void main() {
       expect(w.purchaseProblems(1, 'medium_box_80'), [PurchaseProblem.facilityLevelTooLow]);
       expect(w.purchaseProblems(1, 'heavy_box_15'), contains(PurchaseProblem.needsTruckTerminal));
       w.advanceTo(w.startUpgrade(1, FacilityType.parking).finishAt);
+      expect(w.purchaseProblems(1, 'medium_box_80'), [PurchaseProblem.facilityLevelTooLow],
+          reason: 'level 2 hanya upgrade statistik');
+      upgradeTo(w, FacilityType.parking, 4);
       expect(w.purchaseProblems(1, 'medium_box_80'), isEmpty);
       final v = w.buyVehicle(1, 'medium_box_80');
       expect(v.model.category, 'medium_truck');
@@ -104,10 +107,8 @@ void main() {
     test('semua model depot kota bisa dibeli setelah fasilitas memenuhi syarat', () {
       final w = newWorld();
       addCash(w, 100000000000);
-      for (final level in [2, 3]) {
-        w.advanceTo(w.startUpgrade(1, FacilityType.parking).finishAt);
-        expect(w.depots[1]!.level(FacilityType.parking), level);
-      }
+      upgradeTo(w, FacilityType.parking, 8);
+      expect(w.depots[1]!.parkingSlots, 8);
       for (final m in w.content.vehicleModels.values.where((m) => !m.unlock.terminal)) {
         expect(w.purchaseProblems(1, m.id).where((p) => p != PurchaseProblem.noFreeSlot), isEmpty, reason: m.id);
       }

@@ -11,6 +11,15 @@ enum LedgerAccount {
 
   /// Dana tambahan dari mode pengembang (build DEV_TOOLS); bukan pendapatan.
   devAdjustment,
+
+  /// Hasil menjual kendaraan ke dealer.
+  vehicleSale,
+
+  /// Membeli barang di supplier (pesanan toko & isi stok gudang).
+  goodsPurchase,
+
+  /// Denda memutus kontrak berulang.
+  agreementPenalty,
 }
 
 class LedgerEntry {

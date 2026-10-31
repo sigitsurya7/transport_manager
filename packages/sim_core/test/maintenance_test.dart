@@ -93,7 +93,7 @@ void main() {
     test('bengkel 1 bay: kendaraan kedua antre sampai bay kosong', () {
       final w = wornWorld();
       addCash(w, 2000000000);
-      w.advanceTo(w.startUpgrade(1, FacilityType.workshop).finishAt);
+      upgradeTo(w, FacilityType.workshop, levelWith(w, FacilityType.workshop, 'bays', 1));
       final second = w.buyVehicle(1, 'pickup_box_1t');
       second.condition[VehicleComponent.tires] = 0.1;
       final a = w.startMaintenance(vehicleId, 'tires');

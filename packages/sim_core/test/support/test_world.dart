@@ -82,5 +82,21 @@ Contract addContract(
   );
 }
 
+/// Naikkan fasilitas sampai [level] (menunggu tiap konstruksi selesai).
+void upgradeTo(SimWorld world, FacilityType type, int level, {int depotId = 1}) {
+  while (world.depots[depotId]!.level(type) < level) {
+    world.advanceTo(world.startUpgrade(depotId, type).finishAt);
+  }
+}
+
+/// Level pertama di mana stat [stat] fasilitas mencapai [value].
+int levelWith(SimWorld world, FacilityType type, String stat, num value) {
+  final spec = world.content.facilities[type];
+  for (var l = 1; l <= spec.maxLevel; l++) {
+    if ((spec.level(l).stats[stat] ?? 0) >= value) return l;
+  }
+  throw StateError('Tidak ada level ${type.id} dengan $stat >= $value');
+}
+
 const vehicleId = 2;
 const driverId = 3;

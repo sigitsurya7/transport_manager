@@ -96,7 +96,10 @@ class Vehicle {
     this.tripId,
     Map<VehicleComponent, double>? condition,
     this.maintenance,
-  }) : condition = condition ?? {for (final c in VehicleComponent.values) c: 1.0};
+    this.builtYear = 2026,
+    int? purchasePriceIdr,
+  })  : purchasePriceIdr = purchasePriceIdr ?? model.priceIdr,
+        condition = condition ?? {for (final c in VehicleComponent.values) c: 1.0};
 
   final int id;
   final VehicleModel model;
@@ -117,7 +120,16 @@ class Vehicle {
   /// Pekerjaan bengkel yang sedang berjalan / antre; kendaraan tidak bisa ditugaskan.
   MaintenanceJob? maintenance;
 
+  /// Tahun produksi (kendaraan bekas lebih tua dari tahun berjalan).
+  final int builtYear;
+
+  /// Harga yang dibayar perusahaan saat membeli.
+  final int purchasePriceIdr;
+
   bool get isAvailable => tripId == null && maintenance == null;
+
+  /// Rata-rata kondisi komponen.
+  double get averageCondition => condition.values.reduce((a, b) => a + b) / condition.length;
 
   /// Kondisi terburuk (untuk ringkasan & risiko).
   double get worstCondition => condition.values.reduce((a, b) => a < b ? a : b);
@@ -131,9 +143,12 @@ class Vehicle {
         'trip': tripId,
         'condition': {for (final e in condition.entries) e.key.id: e.value},
         'maintenance': maintenance?.toJson(),
+        'built_year': builtYear,
+        'purchase_idr': purchasePriceIdr,
       };
 
-  factory Vehicle.fromJson(Map<String, dynamic> j, Map<String, VehicleModel> models) {
+  /// Save sebelum jual-beli armada: tahun produksi = [defaultYear], harga beli = harga baru.
+  factory Vehicle.fromJson(Map<String, dynamic> j, Map<String, VehicleModel> models, {int defaultYear = 2026}) {
     final model = models[j['model']];
     if (model == null) throw FormatException('Model kendaraan tidak dikenal: ${j['model']}');
     return Vehicle(
@@ -149,6 +164,8 @@ class Vehicle {
           c: ((j['condition'] as Map?)?[c.id] as num?)?.toDouble() ?? 1.0,
       },
       maintenance: j['maintenance'] == null ? null : MaintenanceJob.fromJson(j['maintenance'] as Map<String, dynamic>),
+      builtYear: j['built_year'] as int? ?? defaultYear,
+      purchasePriceIdr: j['purchase_idr'] as int?,
     );
   }
 }

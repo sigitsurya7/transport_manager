@@ -116,3 +116,25 @@ Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Ara
 > (Instruksi panjang berbahasa Inggris, diringkas.) Audit dulu sebelum mengubah. Perluas katalog kendaraan di setiap kategori (pikap, van, truk mini, truk ringan, truk sedang, truk berat rigid, tractor head, kendaraan khusus) dengan model yang benar-benar berbeda bentuknya (bukan ganti warna). Data tiap kendaraan: id, nama, kategori/subkategori, harga, biaya operasi, kapasitas & jenis muatan, dimensi & tapak parkir, kecepatan, BBM, perawatan, syarat buka/tier, referensi model, bodi/trailer/kontainer yang kompatibel. Pisahkan sasis, bodi muatan, trailer, kontainer dengan data kompatibilitas eksplisit dan validasi. Tingkatkan kualitas visual depot (lantai, marka parkir, area muat, gudang, dock, gerbang, pagar, jalan, kantor, bengkel, pencahayaan, umpan balik slot terisi/kosong) dan props industri; upgrade fasilitas harus terlihat berubah sesuai data; pertahankan progres awal 3 slot. Pilih satu arah visual yang konsisten (low-poly bergaya atau voxel). Aset pihak ketiga boleh bila lisensinya diverifikasi & didokumentasikan; bila tidak, buat model orisinal lewat generator. Integrasikan dengan gameplay (beli, sopir, dispatch, parkir, muat, gerbang, rute, perawatan, save/load, offline). Dealer dengan navigasi kategori, thumbnail, perbandingan. Optimasi untuk HP. Tambah test (katalog, referensi aset, kompatibilitas, data upgrade). Laporan akhir lengkap.
 >
 > Jalankan saja semuanya langsung. sampai selesai.
+
+## 2026-10-31 22:57 — Revisi alur kontrak, gudang, jual-beli armada, level 15, depot hidup
+
+> Tapi di sistem warehouse tuh ada yang salah.
+>
+> Kontrak itu terjadi seperti ini alurnya...
+> Jadi A ( Supplier Mang Engking ) minat sama jasa kita buat nganter barang ke B ( Warung mang ujang ), jadi kita cuma keluar dari depot ke poin A terus nganter ke poin B. Bukan loading di depot, karna apa ? Yak, betul. Warehouse kita belum punya apa-apa.
+>
+> Nah kontrak ini ada yang sekali jalan dan ada yang berkelanjutan. Mis. Berkelanjutan jadi tiap hari / minggu / beberapa hari sekali mengirim barang dari poin yang uda di tentukan dengan mobil yang sama.
+>
+> Klo warehouse kita buat apa ? Nah, warehouse kita itu di fungsikan untuk nyimpen barang. Misal Toko indojuni minta barang A, B, C, nah di warehouse belum ada barangnya atau cuma ada barang A, atau B, atau C aja. Yauda berarti loading barang yang ada di warehouse terus sisanya ngambil barang ke supplier yang ada. Berarti modal lagi tuh 😂 beda cerita klo barangnya ada di warehouse. Jadi bisa ambil langsung di warehouse.
+>
+> Nah ada lagi yang kurang.
+> Jual beli armada.
+>
+> Kadang gini bre.... Misal usaha lagi jatuh banget kan mau gamau armada ada yang di jual ( sesuai odo meter dan kondisi serta tahun produksi ) nah pas uda dijual beli yang lebih murah tapi bekas. Atau ikutan lelang, nah lelang ini ( next feature ) wkwk
+>
+> Terus untuk lv nya sekarang baru 3. Gue pengen lvnya tuh sampe 15. Jadi bener2 depot itu kaya terminal nantinya 🤣 Warehouse yang gede, kantor yang gede. Jadi tiap upgrade ga melulu soal visual, ada yang upgrade tapi cuma nambah stat aja. Dan ada yang upgrade sekalian ganti wajah. Terus di tambah area depot yang hidup, sebab yang sekarang area depot hidup hanya saat mobil di tugaskan aja.
+>
+> Kerjakan sampai kuota mingguan maksimum ada di 70% jika sudah menyentuh atau lebih maka stop dan berikan point untuk resumenya
+
+Desain: `docs/TAHAP_4_REVISI.md`. Catatan: Claude tidak bisa melihat sisa kuota user, jadi pekerjaan dipecah per bagian dengan commit di setiap bagian dan titik resume di `progress.md`.

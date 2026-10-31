@@ -1,15 +1,105 @@
 {
-  "_comment": "Barang kontrak. kind = jenis muatan (cargo_kinds di vehicle_models.json): hanya kendaraan dengan bodi yang sanggup yang bisa mengangkut. Tawaran kontrak hanya memakai jenis yang bisa dilayani armada depot.",
+  "_comment": "Barang kontrak. kind = jenis muatan (cargo_kinds di vehicle_models.json): hanya kendaraan dengan bodi yang sanggup yang bisa mengangkut. Tawaran kontrak hanya memakai jenis yang bisa dilayani armada depot. price_idr = harga dasar per unit di supplier; unit_volume_m3 = volume di gudang; storable = bisa disimpan di gudang umum (barang beku menunggu cold storage, barang curah/kendaraan/kayu tidak disimpan).",
   "cargo": [
-    {"id": "air_galon", "name": "Air mineral galon", "unit": "galon", "unit_weight_kg": 19, "kind": "general"},
-    {"id": "beras_25", "name": "Beras karung 25 kg", "unit": "karung", "unit_weight_kg": 25, "kind": "general"},
-    {"id": "minyak_goreng", "name": "Minyak goreng (karton 12 L)", "unit": "karton", "unit_weight_kg": 12, "kind": "general"},
-    {"id": "mi_instan", "name": "Mi instan (dus)", "unit": "dus", "unit_weight_kg": 3, "kind": "general"},
-    {"id": "frozen_food", "name": "Makanan beku (karton)", "unit": "karton", "unit_weight_kg": 10, "kind": "chilled"},
-    {"id": "semen_40", "name": "Semen sak 40 kg", "unit": "sak", "unit_weight_kg": 40, "kind": "construction"},
-    {"id": "pasir", "name": "Pasir curah", "unit": "m³", "unit_weight_kg": 1400, "kind": "bulk"},
-    {"id": "air_bersih", "name": "Air bersih curah (1.000 L)", "unit": "kL", "unit_weight_kg": 1000, "kind": "liquid"},
-    {"id": "mobil_unit", "name": "Mobil penumpang", "unit": "unit", "unit_weight_kg": 1150, "kind": "vehicle"},
-    {"id": "kayu_log", "name": "Kayu gelondong", "unit": "m³", "unit_weight_kg": 750, "kind": "timber"}
+    {
+      "id": "air_galon",
+      "name": "Air mineral galon",
+      "unit": "galon",
+      "unit_weight_kg": 19,
+      "kind": "general",
+      "unit_volume_m3": 0.03,
+      "price_idr": 20000,
+      "storable": true
+    },
+    {
+      "id": "beras_25",
+      "name": "Beras karung 25 kg",
+      "unit": "karung",
+      "unit_weight_kg": 25,
+      "kind": "general",
+      "unit_volume_m3": 0.04,
+      "price_idr": 330000,
+      "storable": true
+    },
+    {
+      "id": "minyak_goreng",
+      "name": "Minyak goreng (karton 12 L)",
+      "unit": "karton",
+      "unit_weight_kg": 12,
+      "kind": "general",
+      "unit_volume_m3": 0.02,
+      "price_idr": 210000,
+      "storable": true
+    },
+    {
+      "id": "mi_instan",
+      "name": "Mi instan (dus)",
+      "unit": "dus",
+      "unit_weight_kg": 3,
+      "kind": "general",
+      "unit_volume_m3": 0.03,
+      "price_idr": 110000,
+      "storable": true
+    },
+    {
+      "id": "frozen_food",
+      "name": "Makanan beku (karton)",
+      "unit": "karton",
+      "unit_weight_kg": 10,
+      "kind": "chilled",
+      "unit_volume_m3": 0.04,
+      "price_idr": 260000,
+      "storable": false
+    },
+    {
+      "id": "semen_40",
+      "name": "Semen sak 40 kg",
+      "unit": "sak",
+      "unit_weight_kg": 40,
+      "kind": "construction",
+      "unit_volume_m3": 0.03,
+      "price_idr": 65000,
+      "storable": true
+    },
+    {
+      "id": "pasir",
+      "name": "Pasir curah",
+      "unit": "m³",
+      "unit_weight_kg": 1400,
+      "kind": "bulk",
+      "unit_volume_m3": 1.0,
+      "price_idr": 250000,
+      "storable": false
+    },
+    {
+      "id": "air_bersih",
+      "name": "Air bersih curah (1.000 L)",
+      "unit": "kL",
+      "unit_weight_kg": 1000,
+      "kind": "liquid",
+      "unit_volume_m3": 1.0,
+      "price_idr": 60000,
+      "storable": false
+    },
+    {
+      "id": "mobil_unit",
+      "name": "Mobil penumpang",
+      "unit": "unit",
+      "unit_weight_kg": 1150,
+      "kind": "vehicle",
+      "unit_volume_m3": 12.0,
+      "price_idr": 180000000,
+      "storable": false
+    },
+    {
+      "id": "kayu_log",
+      "name": "Kayu gelondong",
+      "unit": "m³",
+      "unit_weight_kg": 750,
+      "kind": "timber",
+      "unit_volume_m3": 1.0,
+      "price_idr": 1500000,
+      "storable": false
+    }
   ]
 }
