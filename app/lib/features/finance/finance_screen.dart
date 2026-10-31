@@ -10,6 +10,9 @@ const _accountLabel = {
   LedgerAccount.contractRevenue: 'Pendapatan kontrak',
   LedgerAccount.fuel: 'BBM',
   LedgerAccount.toll: 'Tol',
+  LedgerAccount.wages: 'Gaji karyawan',
+  LedgerAccount.vehiclePurchase: 'Pembelian kendaraan',
+  LedgerAccount.facilityUpgrade: 'Pembangunan fasilitas',
 };
 
 class FinanceScreen extends StatelessWidget {
@@ -23,7 +26,8 @@ class FinanceScreen extends StatelessWidget {
         builder: (context, _) {
           final ledger = session.world.ledger;
           final revenue = ledger.total(LedgerAccount.contractRevenue);
-          final costs = ledger.total(LedgerAccount.fuel) + ledger.total(LedgerAccount.toll);
+          final costs = ledger.total(LedgerAccount.fuel) + ledger.total(LedgerAccount.toll) + ledger.total(LedgerAccount.wages);
+          final investment = ledger.total(LedgerAccount.vehiclePurchase) + ledger.total(LedgerAccount.facilityUpgrade);
           final entries = ledger.entries.reversed.toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -41,6 +45,8 @@ class FinanceScreen extends StatelessWidget {
                       Expanded(child: _Stat('Biaya operasi', costs, AppColors.negative)),
                       Expanded(child: _Stat('Laba operasi', revenue + costs, null)),
                     ]),
+                    const SizedBox(height: 10),
+                    _Stat('Investasi (kendaraan & fasilitas)', investment, null),
                   ]),
                 ),
               ),

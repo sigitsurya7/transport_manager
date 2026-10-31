@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:sim_core/sim_core.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../contracts/trip_card.dart';
@@ -117,7 +118,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           bottom: 12,
           child: Column(children: [
             _MapButton(
-              icon: Icons.warehouse_rounded,
+              glyph: GameGlyph.depot,
               tooltip: 'Ke depot',
               onTap: () {
                 _followVehicle = null;
@@ -126,7 +127,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ),
             const SizedBox(height: 8),
             _MapButton(
-              icon: Icons.my_location_rounded,
+              glyph: GameGlyph.fleet,
               tooltip: 'Ikuti kendaraan',
               selected: _followVehicle != null,
               onTap: () {
@@ -148,9 +149,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 }
 
 class _MapButton extends StatelessWidget {
-  const _MapButton({required this.icon, required this.tooltip, required this.onTap, this.selected = false});
+  const _MapButton({required this.glyph, required this.tooltip, required this.onTap, this.selected = false});
 
-  final IconData icon;
+  final GameGlyph glyph;
   final String tooltip;
   final VoidCallback onTap;
   final bool selected;
@@ -162,7 +163,7 @@ class _MapButton extends StatelessWidget {
         child: IconButton(
           tooltip: tooltip,
           onPressed: onTap,
-          icon: Icon(icon, color: selected ? AppColors.onAccent : AppColors.text),
+          icon: GlyphIcon(glyph, color: selected ? AppColors.onAccent : AppColors.text),
         ),
       );
 }
@@ -188,8 +189,7 @@ class _StatusPanel extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(children: [
-                Icon(t.phase == TripPhase.inbound ? Icons.keyboard_return_rounded : Icons.local_shipping_rounded,
-                    size: 18, color: AppColors.accent),
+                VehicleIcon(session.world.vehicles[t.vehicleId]!.model.visual, width: 36),
                 const SizedBox(width: 8),
                 Expanded(child: Text(phaseLabel[t.phase]!, overflow: TextOverflow.ellipsis)),
               ]),
@@ -273,12 +273,12 @@ class _OverlayPainter extends CustomPainter {
         );
       }
       final dest = _screen(world.graph.node(world.contracts[trip.contractId]!.destinationNode));
-      _pin(canvas, dest, AppColors.routeOut, Icons.storefront_rounded);
+      _pin(canvas, dest, AppColors.routeOut, GameGlyph.store);
     }
 
     // Depot.
     for (final d in world.depots.values) {
-      _pin(canvas, _screen(world.graph.node(d.roadNode)), AppColors.accent, Icons.warehouse_rounded);
+      _pin(canvas, _screen(world.graph.node(d.roadNode)), AppColors.accent, GameGlyph.depot);
     }
 
     // Kendaraan di jalan / di pelanggan.
@@ -290,17 +290,10 @@ class _OverlayPainter extends CustomPainter {
     }
   }
 
-  void _pin(Canvas canvas, Offset at, Color color, IconData icon) {
+  void _pin(Canvas canvas, Offset at, Color color, GameGlyph glyph) {
     canvas.drawCircle(at, 15, Paint()..color = Colors.black.withValues(alpha: 0.35));
     canvas.drawCircle(at, 13, Paint()..color = color);
-    final tp = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: 16, color: AppColors.onAccent),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
+    paintGlyph(canvas, glyph, Rect.fromCenter(center: at, width: 17, height: 17), AppColors.onAccent);
   }
 
   void _vehicle(Canvas canvas, Offset at, double headingDeg, {required bool moving}) {

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/game_data.dart';
 import '../../game/game_session.dart';
+import '../../util/format.dart';
 
 /// Alur permainan baru: negara → wilayah → kota → lokasi depot → nama perusahaan.
 /// Mengembalikan [GameSession] yang sudah dibuat & tersimpan.
@@ -92,7 +94,7 @@ class _NewGameScreenState extends ConsumerState<NewGameScreen> {
               _Choice(
                 title: c.name,
                 subtitle: '${c.regions.where((r) => r.available).length} wilayah tersedia',
-                icon: Icons.flag_rounded,
+                icon: const _Flag(),
                 onTap: () => setState(() {
                   _country = c;
                   _next();
@@ -104,7 +106,7 @@ class _NewGameScreenState extends ConsumerState<NewGameScreen> {
               _Choice(
                 title: r.name,
                 subtitle: r.available ? '${r.cities.where((c) => c.hasMapPack).length} kota siap dimainkan' : 'Paket peta belum tersedia',
-                icon: Icons.terrain_rounded,
+                icon: const GlyphIcon(GameGlyph.map),
                 enabled: r.available,
                 onTap: () => setState(() {
                   _region = r;
@@ -117,7 +119,7 @@ class _NewGameScreenState extends ConsumerState<NewGameScreen> {
               _Choice(
                 title: c.name,
                 subtitle: c.hasMapPack ? c.province : '${c.province} · paket peta belum tersedia',
-                icon: Icons.location_city_rounded,
+                icon: const GlyphIcon(GameGlyph.office),
                 enabled: c.hasMapPack,
                 onTap: () => setState(() {
                   _city = c;
@@ -130,7 +132,7 @@ class _NewGameScreenState extends ConsumerState<NewGameScreen> {
               _Choice(
                 title: 'Depot ${s.name}',
                 subtitle: 'Lahan 40×30 m · 3 slot parkir · gudang kecil · 1 loading area',
-                icon: Icons.warehouse_rounded,
+                icon: const GlyphIcon(GameGlyph.depot),
                 onTap: () => setState(() {
                   _site = s;
                   _next();
@@ -172,7 +174,7 @@ class _Choice extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback onTap;
   final bool enabled;
 
@@ -183,7 +185,10 @@ class _Choice extends StatelessWidget {
           child: ListTile(
             enabled: enabled,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Icon(icon, color: enabled ? AppColors.accent : AppColors.textMuted),
+            leading: IconTheme(
+              data: IconThemeData(color: enabled ? AppColors.accent : AppColors.textMuted),
+              child: SizedBox(width: 30, child: Center(child: icon)),
+            ),
             title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text(subtitle, style: const TextStyle(color: AppColors.textMuted)),
             trailing: enabled ? const Icon(Icons.chevron_right_rounded) : const Icon(Icons.lock_outline_rounded),
@@ -203,11 +208,11 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vehicle = content.content.vehicleModels['pickup_box_1t']!;
-    Widget row(IconData icon, String text) => Padding(
+    Widget row(Widget icon, String text) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(children: [
-            Icon(icon, size: 20, color: AppColors.accent),
-            const SizedBox(width: 12),
+            SizedBox(width: 40, child: Center(child: icon)),
+            const SizedBox(width: 10),
             Expanded(child: Text(text)),
           ]),
         );
@@ -217,12 +222,32 @@ class _Summary extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Modal awal', style: TextStyle(color: AppColors.textMuted)),
           const SizedBox(height: 6),
-          row(Icons.location_on_rounded, 'Depot ${site.name}, ${city.name}'),
-          row(Icons.local_shipping_rounded, '1 × ${vehicle.name}'),
-          row(Icons.person_rounded, '1 sopir'),
-          row(Icons.local_parking_rounded, '3 slot parkir (2 kosong)'),
+          row(const GlyphIcon(GameGlyph.depot, size: 22, color: AppColors.accent), 'Depot ${site.name}, ${city.name}'),
+          row(VehicleIcon(vehicle.visual, width: 40), '1 × ${vehicle.name}'),
+          row(const GlyphIcon(GameGlyph.driver, size: 22, color: AppColors.accent), '1 sopir'),
+          row(const GlyphIcon(GameGlyph.parking, size: 22, color: AppColors.accent), '3 slot parkir (2 kosong)'),
+          row(const GlyphIcon(GameGlyph.finance, size: 22, color: AppColors.accent),
+              'Modal ${formatRupiah(content.content.economy.startingCashIdr)}'),
         ]),
       ),
     );
   }
+}
+
+/// Bendera Indonesia (merah-putih).
+class _Flag extends StatelessWidget {
+  const _Flag();
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(3),
+        child: const SizedBox(
+          width: 28,
+          height: 19,
+          child: Column(children: [
+            Expanded(child: ColoredBox(color: Color(0xFFD7262E), child: SizedBox.expand())),
+            Expanded(child: ColoredBox(color: Color(0xFFF7F7F2), child: SizedBox.expand())),
+          ]),
+        ),
+      );
 }

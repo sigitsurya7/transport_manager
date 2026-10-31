@@ -53,7 +53,7 @@ void main() {
       expect(world.drivers[driverId]!.isAvailable, isTrue);
       expect(world.drivers[driverId]!.drivingSeconds, quote.outboundS + quote.inboundS);
       expect(world.vehicleSnapshot(vehicleId).activity, VehicleActivity.parked);
-      expect(world.queue.isEmpty, isTrue);
+      expect(world.queue.snapshot().where((e) => e.event is TripPhaseEnded), isEmpty);
     });
 
     test('kas tidak berubah tanpa entri buku besar', () {
@@ -83,7 +83,8 @@ void main() {
         seen.add(trip.phase);
         world.advanceTo(trip.phaseEnd);
       }
-      expect(seen, TripPhase.values.where((p) => p != TripPhase.completed).toList());
+      // Dock & gerbang kosong: fase antrean dilewati tanpa menunggu.
+      expect(seen, TripPhase.values.where((p) => p != TripPhase.completed && !p.waiting).toList());
     });
 
     test('posisi di jalan mengikuti rute: berangkat dari depot, tiba di tujuan', () {

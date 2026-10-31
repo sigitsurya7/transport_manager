@@ -1,8 +1,53 @@
 {
   "_comment": "Katalog model kendaraan. Angka adalah pendekatan kendaraan niaga Indonesia untuk prototipe; diseimbangkan ulang di Tahap 4.",
   "models": [
-    {"id": "pickup_open_1t", "name": "Pikap losbak 1 ton", "class": "pickup_open", "max_speed_kmh": 90, "empty_weight_kg": 1200, "payload_kg": 1000, "toll_golongan": 1, "fuel_l_per_100km": 10.5, "price_idr": 190000000},
-    {"id": "pickup_box_1t", "name": "Pikap box 1 ton", "class": "pickup_box", "max_speed_kmh": 90, "empty_weight_kg": 1350, "payload_kg": 950, "toll_golongan": 1, "fuel_l_per_100km": 11, "price_idr": 215000000},
-    {"id": "mini_truck_2t", "name": "Mini truck 2 ton", "class": "mini_truck", "max_speed_kmh": 80, "empty_weight_kg": 2100, "payload_kg": 2200, "toll_golongan": 1, "fuel_l_per_100km": 13, "price_idr": 290000000}
+    {
+      "id": "pickup_open_1t",
+      "name": "Pikap losbak 1 ton",
+      "class": "pickup_open",
+      "max_speed_kmh": 90,
+      "empty_weight_kg": 1200,
+      "payload_kg": 1000,
+      "toll_golongan": 1,
+      "fuel_l_per_100km": 10.5,
+      "price_idr": 190000000,
+      "visual": "pickup_open"
+    },
+    {
+      "id": "pickup_box_1t",
+      "name": "Pikap box 1 ton",
+      "class": "pickup_box",
+      "max_speed_kmh": 90,
+      "empty_weight_kg": 1350,
+      "payload_kg": 950,
+      "toll_golongan": 1,
+      "fuel_l_per_100km": 11,
+      "price_idr": 215000000,
+      "visual": "pickup"
+    },
+    {
+      "id": "mini_truck_2t",
+      "name": "Mini truck 2 ton",
+      "class": "mini_truck",
+      "max_speed_kmh": 80,
+      "empty_weight_kg": 2100,
+      "payload_kg": 2200,
+      "toll_golongan": 1,
+      "fuel_l_per_100km": 13,
+      "price_idr": 290000000,
+      "visual": "mini_truck"
+    },
+    {
+      "id": "container_truck_4t",
+      "name": "Truk engkel kontainer 10 ft",
+      "class": "light_truck",
+      "max_speed_kmh": 80,
+      "empty_weight_kg": 3600,
+      "payload_kg": 4000,
+      "toll_golongan": 2,
+      "fuel_l_per_100km": 17,
+      "price_idr": 420000000,
+      "visual": "container_truck"
+    }
   ]
 }

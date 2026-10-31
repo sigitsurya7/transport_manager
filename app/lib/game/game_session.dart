@@ -40,7 +40,14 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     required SaveMeta initialMeta,
     required this.deviceClock,
   })  : _meta = initialMeta,
-        clock = SimClock(startSimSeconds: world.now);
+        clock = SimClock(
+          startSimSeconds: world.now,
+          entitlement: devTools ? const DevSpeedEntitlement() : const FreeSpeedEntitlement(),
+        );
+
+  /// Alat pengujian (pengali kecepatan waktu) hanya di build
+  /// `--dart-define=DEV_TOOLS=true`, bukan untuk pemain.
+  static const devTools = bool.fromEnvironment('DEV_TOOLS');
 
   static const offerCount = 3;
   static const _autosaveEvery = Duration(seconds: 60);
@@ -256,6 +263,27 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     while (offers.length < offerCount && attempts++ < offerCount * 2) {
       world.offerStoreContract(depotId: depot.id, capacityKg: capacity);
     }
+    notifyListeners();
+  }
+
+  Depot get depot => world.depots.values.first;
+
+  /// Ganti pengali kecepatan ke nilai berikutnya yang diizinkan.
+  void cycleSpeed() {
+    final allowed = clock.entitlement.allowedMultipliers.toList()..sort();
+    final i = allowed.indexOf(clock.speedMultiplier);
+    clock.setSpeedMultiplier(allowed[(i + 1) % allowed.length]);
+    notifyListeners();
+  }
+
+  void startUpgrade(FacilityType type) => _command(() => world.startUpgrade(depot.id, type));
+  void buyVehicle(String modelId) => _command(() => world.buyVehicle(depot.id, modelId));
+  void hire(EmployeeRole role) => _command(() => world.hire(depot.id, role));
+  void releaseWarehouseStaff() => _command(() => world.releaseWarehouseStaff(depot.id));
+
+  void _command(void Function() action) {
+    action();
+    unawaited(save());
     notifyListeners();
   }
 

@@ -375,6 +375,8 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 | 10 | Arah visual | Low-poly bergaya: warna flat rapi + pencahayaan matahari dengan bayangan, tanpa tekstur. Aset dibuat oleh `tools/depot_glb/make_depot_glb.py` dengan anggaran segitiga yang diuji (depot ≤ 8.000, pikap ≤ 800). |
 | 11 | Save slot | **SQLite langsung (`package:sqlite3`)**, bukan Drift: satu file per slot berisi `save_meta` + dokumen JSON `SimWorld`. Skemanya kecil sehingga code generation Drift tidak sepadan. Migrasi lewat `PRAGMA user_version`, file dicadangkan sebelum migrasi. Tabel ternormalisasi bisa ditambah di Tahap 4 bila laporan butuh query. |
 | 12 | Waktu tempuh | `TravelTimeModel` pluggable; default sementara = estimasi A*. Logika yang lebih realistis menyusul dari user. |
+| 14 | Render mode Android | **TextureView** (`MainActivity.getRenderMode`). SurfaceView membuat layar statis tertunda puluhan detik di HP uji (MIUI, Android 16). |
+| 15 | Aset depot | Modular per level fasilitas + jejak tabrakan diekspor generator; test app menjamin tidak ada kendaraan menembus properti. |
 | 13 | Peta di app | Jalan digambar sebagai vektor dari graph map pack (CustomPainter, path di-cache); vector tiles MBTiles menyusul setelah ekstrak Jawa lengkap. |
 
 ### Dampak skala waktu terhadap desain

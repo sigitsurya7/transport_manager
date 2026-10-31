@@ -1,14 +1,25 @@
 import '../routing/route_planner.dart';
 
 /// Fase satu siklus pengiriman, berurutan. Kendaraan tidak pernah muncul
-/// atau hilang: setiap perpindahan punya fase dan durasi sendiri.
+/// atau hilang: setiap perpindahan punya fase dan durasi sendiri. Fase
+/// `wait*` adalah antrean: durasinya tidak diketahui sampai sumber daya
+/// (dock / jalur gerbang) kosong.
 enum TripPhase {
-  /// Dari slot parkir ke loading area.
+  /// Menunggu loading dock kosong (di slot parkir).
+  waitDock(inDepot: true, waiting: true),
+
+  /// Keluar dari slot menuju loading dock.
   toDock(inDepot: true),
   loading(inDepot: true),
 
-  /// Dari loading area ke gerbang, lalu keluar.
+  /// Dari loading dock ke depan gerbang.
   toGate(inDepot: true),
+
+  /// Antre di depan gerbang untuk keluar.
+  waitGateOut(inDepot: true, waiting: true),
+
+  /// Pemeriksaan & lewat gerbang keluar.
+  gateOut(inDepot: true),
 
   /// Di jalan menuju tujuan.
   outbound(onRoad: true),
@@ -17,20 +28,24 @@ enum TripPhase {
   /// Di jalan kembali ke depot.
   inbound(onRoad: true),
 
-  /// Melewati gerbang masuk.
+  /// Antre di jalan depan depot untuk masuk.
+  waitGateIn(waiting: true),
+
+  /// Pemeriksaan & lewat gerbang masuk.
   gateIn(inDepot: true),
+
+  /// Dari gerbang ke slot parkir.
   toSlot(inDepot: true),
 
   /// Pemeriksaan kendaraan setelah parkir.
   inspection(inDepot: true),
   completed(inDepot: true);
 
-  const TripPhase({this.inDepot = false, this.onRoad = false});
+  const TripPhase({this.inDepot = false, this.onRoad = false, this.waiting = false});
 
   final bool inDepot;
   final bool onRoad;
-
-  TripPhase get next => TripPhase.values[index + 1];
+  final bool waiting;
 }
 
 /// Satu leg perjalanan di jalan, disimpan sebagai daftar edge graph.
@@ -90,6 +105,8 @@ class Trip {
     required this.phase,
     required this.phaseStart,
     required this.phaseEnd,
+    this.dock,
+    this.gateLane,
   });
 
   final int id;
@@ -103,7 +120,17 @@ class Trip {
 
   TripPhase phase;
   int phaseStart;
+
+  /// Akhir fase. Untuk fase antrean (`wait*`) belum diketahui → sama dengan
+  /// [phaseStart].
   int phaseEnd;
+
+  /// Loading dock yang dipakai (dipesan sejak berangkat dari slot sampai
+  /// selesai muat).
+  int? dock;
+
+  /// Jalur gerbang yang sedang dilewati.
+  int? gateLane;
 
   bool get isActive => phase != TripPhase.completed;
 
@@ -119,6 +146,8 @@ class Trip {
         'phase': phase.name,
         'phase_start': phaseStart,
         'phase_end': phaseEnd,
+        'dock': dock,
+        'gate_lane': gateLane,
       };
 
   factory Trip.fromJson(Map<String, dynamic> j) => Trip(
@@ -133,5 +162,7 @@ class Trip {
         phase: TripPhase.values.byName(j['phase'] as String),
         phaseStart: j['phase_start'] as int,
         phaseEnd: j['phase_end'] as int,
+        dock: j['dock'] as int?,
+        gateLane: j['gate_lane'] as int?,
       );
 }

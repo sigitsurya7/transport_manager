@@ -6,6 +6,12 @@ enum WorldLogKind {
   delivered,
   returnedToDepot,
   tripCompleted,
+  upgradeStarted,
+  upgradeFinished,
+  vehiclePurchased,
+  employeeHired,
+  employeeReleased,
+  payrollPaid,
 }
 
 /// Satu baris log. Teks untuk pemain disusun UI dari [kind] + [data]

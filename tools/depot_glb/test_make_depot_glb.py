@@ -42,7 +42,7 @@ class GlbTest(unittest.TestCase):
                 self.assertEqual((cross[i] > 0) - (cross[i] < 0), n[i])
 
     def test_files_valid(self):
-        for name in ("depot", "pickup", "worker"):
+        for name in g.models():
             with self.subTest(name=name):
                 doc, blob = read_glb(os.path.join(self.dir, f"{name}.glb"))
                 self.assertEqual(doc["buffers"][0]["byteLength"], len(blob))
@@ -64,7 +64,7 @@ class GlbTest(unittest.TestCase):
 
     def test_triangles_face_their_normals(self):
         """Winding setiap segitiga searah normal verteksnya (tidak ada sisi terbalik)."""
-        for name in ("depot", "pickup", "worker"):
+        for name in g.models():
             doc, blob = read_glb(os.path.join(self.dir, f"{name}.glb"))
             for prim in doc["meshes"][0]["primitives"]:
                 def floats(acc_id):
@@ -86,16 +86,26 @@ class GlbTest(unittest.TestCase):
 
     def test_budget_segitiga(self):
         """Aset harus tetap ringan untuk HP kelas menengah."""
-        budget = {"depot": 8000, "pickup": 800, "worker": 300}
-        for name, builder in (("depot", g.build_depot()), ("pickup", g.build_pickup()), ("worker", g.build_worker())):
+        for name, builder in g.models().items():
             tris = sum(len(p["idx"]) // 3 for p in builder.parts.values())
-            self.assertLessEqual(tris, budget[name], name)
+            self.assertLessEqual(tris, g.BUDGET.get(name, g.MODULE_BUDGET), name)
+
+    def test_model_fasilitas_sesuai_konten(self):
+        """Setiap level di content/facilities.json punya modul GLB."""
+        root = os.path.join(os.path.dirname(__file__), "..", "..", "content", "facilities.json")
+        facilities = json.load(open(root, encoding="utf-8"))["facilities"]
+        names = set(g.models())
+        for f in facilities:
+            for level in f["levels"]:
+                self.assertIn(level["model"], names)
 
     def test_layout(self):
         layout = json.load(open(os.path.join(self.dir, "depot_layout.json")))
-        self.assertEqual(len(layout["parking_slots"]), 3)
-        for key in ("outside", "gate", "lane_z", "dock_stop", "loading_dock"):
+        self.assertEqual(len(layout["parking_slots"]), 8)
+        for key in ("outside", "road_lane_z", "gate", "lane_z", "docks", "gate_lanes", "booms", "anchors"):
             self.assertIn(key, layout)
+        for level in ("1", "2", "3"):
+            self.assertEqual(len(layout["docks"][level]), len(g.DOCKS[int(level)]))
 
 
 if __name__ == "__main__":

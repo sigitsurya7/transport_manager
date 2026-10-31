@@ -3,10 +3,16 @@ package id.koala.transport_manager
 import android.os.SystemClock
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    // TextureView: frame Flutter ikut jalur render Android biasa. Dengan
+    // SurfaceView, HP uji (MIUI, Android 16) menahan vsync saat layar statis
+    // sehingga ketukan baru tampil setelah puluhan detik.
+    override fun getRenderMode(): RenderMode = RenderMode.texture
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Jam untuk validasi waktu offline: elapsedRealtime tidak bisa diubah

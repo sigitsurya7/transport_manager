@@ -1,12 +1,11 @@
 {
-  "_comment": "Durasi aktivitas depot dalam detik game (Tahap 2b: tetap; antrean gate/dock di Tahap 3).",
+  "_comment": "Durasi aktivitas depot & bongkar muat (detik game). Waktu lewat gerbang dari level gerbang (facilities.json).",
   "slot_to_dock_s": 120,
   "loading_base_s": 600,
   "loading_per_ton_s": 900,
   "dock_to_gate_s": 60,
   "unloading_base_s": 600,
   "unloading_per_ton_s": 900,
-  "gate_in_s": 60,
   "gate_to_slot_s": 120,
   "inspection_s": 600
 }

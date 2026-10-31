@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import '../contracts/contract.dart';
 import '../contracts/contract_tiers.dart';
 import '../depot/depot.dart';
+import '../depot/facilities.dart';
 import '../employees/driver.dart';
+import '../employees/employee_config.dart';
 import '../engine/deterministic_rng.dart';
 import '../engine/event_queue.dart';
 import '../finance/ledger.dart';
@@ -19,8 +21,22 @@ import '../vehicle/vehicle_profile.dart';
 import 'game_content.dart';
 import 'world_log.dart';
 
+/// Event dunia yang bisa disimpan.
+sealed class WorldEvent extends SimEvent {
+  const WorldEvent();
+
+  Map<String, dynamic> toJson();
+
+  static WorldEvent fromJson(String type, Map<String, dynamic> j) => switch (type) {
+        TripPhaseEnded.typeName => TripPhaseEnded(j['trip'] as int, TripPhase.values.byName(j['phase'] as String)),
+        ConstructionFinished.typeName => ConstructionFinished(j['depot'] as int),
+        PayrollDue.typeName => const PayrollDue(),
+        _ => throw FormatException('Tipe event tidak dikenal: $type'),
+      };
+}
+
 /// Akhir satu fase trip.
-class TripPhaseEnded extends SimEvent {
+class TripPhaseEnded extends WorldEvent {
   const TripPhaseEnded(this.tripId, this.phase);
 
   static const typeName = 'trip_phase_ended';
@@ -31,17 +47,43 @@ class TripPhaseEnded extends SimEvent {
   @override
   String get type => typeName;
 
+  @override
   Map<String, dynamic> toJson() => {'trip': tripId, 'phase': phase.name};
+}
 
-  factory TripPhaseEnded.fromJson(Map<String, dynamic> j) =>
-      TripPhaseEnded(j['trip'] as int, TripPhase.values.byName(j['phase'] as String));
+/// Konstruksi upgrade fasilitas selesai.
+class ConstructionFinished extends WorldEvent {
+  const ConstructionFinished(this.depotId);
+
+  static const typeName = 'construction_finished';
+
+  final int depotId;
+
+  @override
+  String get type => typeName;
+
+  @override
+  Map<String, dynamic> toJson() => {'depot': depotId};
+}
+
+/// Pergantian hari: upah harian karyawan.
+class PayrollDue extends WorldEvent {
+  const PayrollDue();
+
+  static const typeName = 'payroll_due';
+
+  @override
+  String get type => typeName;
+
+  @override
+  Map<String, dynamic> toJson() => const {};
 }
 
 enum VehicleActivity {
   /// Diam di slot parkir, siap dipakai.
   parked,
 
-  /// Bergerak / bekerja di dalam depot (ke dock, muat, gerbang, parkir, inspeksi).
+  /// Bergerak / bekerja / antre di depot (termasuk antre di jalan depan gerbang).
   inDepot,
 
   /// Di jalan.
@@ -61,6 +103,9 @@ class VehicleSnapshot {
     this.phase,
     this.phaseProgress = 0,
     this.pose,
+    this.dock,
+    this.gateLane,
+    this.queuePosition,
   });
 
   final int vehicleId;
@@ -69,18 +114,45 @@ class VehicleSnapshot {
   final int? tripId;
   final TripPhase? phase;
 
-  /// 0..1 di dalam fase saat ini.
+  /// 0..1 di dalam fase saat ini (0 untuk fase antrean).
   final double phaseProgress;
 
   /// Posisi geografis saat di jalan atau di lokasi pelanggan.
   final TrackPose? pose;
+
+  final int? dock;
+  final int? gateLane;
+
+  /// Urutan di antrean (0 = terdepan) untuk fase `wait*`.
+  final int? queuePosition;
+}
+
+enum UpgradeProblem { maxLevel, constructionBusy, insufficientCash }
+
+enum PurchaseProblem { noFreeSlot, insufficientCash, unknownModel }
+
+enum HireProblem { officeFull }
+
+class CommandException<T extends Enum> implements Exception {
+  const CommandException(this.problems);
+
+  final List<T> problems;
+
+  @override
+  String toString() => 'CommandException(${problems.map((p) => p.name).join(', ')})';
 }
 
 /// Dunia simulasi satu save: state perusahaan + antrean event.
 ///
 /// Satu-satunya sumber kebenaran. UI memanggil perintah ([check],
-/// [dispatch], [offerStoreContract]) dan membaca snapshot; waktu maju lewat
-/// [advanceTo] (dipakai sama persis saat bermain aktif maupun catch-up offline).
+/// [dispatch], [startUpgrade], [buyVehicle], [hire], …) dan membaca
+/// snapshot; waktu maju lewat [advanceTo] (dipakai sama persis saat bermain
+/// aktif maupun catch-up offline).
+///
+/// Loading dock & jalur gerbang adalah sumber daya terbatas. Kendaraan yang
+/// tidak kebagian masuk fase antrean (`wait*`) dan dilayani FIFO saat sumber
+/// daya lepas, sehingga antrean benar-benar memperpanjang waktu operasi.
+/// Isi antrean tidak disimpan terpisah: dibangun ulang dari fase trip.
 class SimWorld {
   SimWorld._({
     required this.graph,
@@ -100,8 +172,8 @@ class SimWorld {
   })  : planner = RoutePlanner(graph),
         _nextId = nextId;
 
-  /// Perusahaan baru: satu depot, satu kendaraan di slot 0, satu sopir,
-  /// modal awal dari `economy.json`.
+  /// Perusahaan baru: satu depot (semua fasilitas level 1), satu kendaraan di
+  /// slot 0, satu sopir, modal awal dari `economy.json`.
   factory SimWorld.newGame({
     required RoadGraph graph,
     required GameContent content,
@@ -112,7 +184,6 @@ class SimWorld {
     required int depotNode,
     required String starterVehicleModelId,
     required String driverName,
-    int parkingSlots = 3,
     int startTime = 0,
     TravelTimeModel travelTime = const RouteEstimateTravelTime(),
   }) {
@@ -122,12 +193,13 @@ class SimWorld {
       throw ArgumentError.value(depotNode, 'depotNode', 'di luar graph');
     }
     const depotId = 1, vehicleId = 2, driverId = 3;
+    final slots = content.facilities[FacilityType.parking].level(1).intStat('slots');
     final depot = Depot(
       id: depotId,
       name: depotName,
       cityId: cityId,
       roadNode: depotNode,
-      parkingSlots: parkingSlots,
+      parkingSlots: slots,
     )..slots[0] = vehicleId;
     final world = SimWorld._(
       graph: graph,
@@ -154,6 +226,7 @@ class SimWorld {
       log: [],
       nextId: 4,
     );
+    world._schedulePayroll();
     return world;
   }
 
@@ -175,10 +248,173 @@ class SimWorld {
 
   final Map<(int, bool), RouteTrack> _tracks = {};
 
+  /// Detik game per hari; detik 0 = Hari 1 pukul 06.00.
+  static const daySeconds = 86400;
+  static const dayStartOffset = 6 * 3600;
+
   /// Waktu simulasi saat ini (detik game).
   int get now => queue.processedUntil;
 
   int get cashIdr => ledger.cashIdr;
+
+  // ---------------------------------------------------------------- fasilitas
+
+  FacilityLevel facility(Depot depot, FacilityType type) =>
+      content.facilities[type].level(depot.level(type));
+
+  int dockCount(Depot depot) => facility(depot, FacilityType.loadingDock).intStat('docks');
+  int gateLaneCount(Depot depot) => facility(depot, FacilityType.gate).intStat('lanes');
+  int gatePassS(Depot depot) => facility(depot, FacilityType.gate).intStat('pass_s');
+  int staffMax(Depot depot) => facility(depot, FacilityType.office).intStat('staff_max');
+
+  /// Karyawan yang dihitung terhadap kapasitas kantor: sopir + staf gudang.
+  int staffCount(Depot depot) =>
+      drivers.values.where((d) => d.depotId == depot.id).length + depot.warehouseStaff;
+
+  /// Durasi muat di depot: dipercepat oleh level dock & jumlah staf gudang.
+  int loadingS(Depot depot, int cargoKg) {
+    final speed = facility(depot, FacilityType.loadingDock).doubleStat('speed') *
+        content.employees.loadingFactor(depot.warehouseStaff);
+    return (content.depotOps.loadingS(cargoKg) / speed).round();
+  }
+
+  List<UpgradeProblem> upgradeProblems(int depotId, FacilityType type) {
+    final depot = _depot(depotId);
+    final spec = content.facilities[type];
+    final current = depot.level(type);
+    return [
+      if (current >= spec.maxLevel) UpgradeProblem.maxLevel,
+      if (depot.construction != null) UpgradeProblem.constructionBusy,
+      if (current < spec.maxLevel && cashIdr < spec.level(current + 1).costIdr) UpgradeProblem.insufficientCash,
+    ];
+  }
+
+  /// Bayar & mulai konstruksi level berikutnya. Satu konstruksi per depot.
+  FacilityConstruction startUpgrade(int depotId, FacilityType type) {
+    final problems = upgradeProblems(depotId, type);
+    if (problems.isNotEmpty) throw CommandException(problems);
+    final depot = _depot(depotId);
+    final next = content.facilities[type].level(depot.level(type) + 1);
+    ledger.post(LedgerEntry(
+      time: now,
+      account: LedgerAccount.facilityUpgrade,
+      amountIdr: -next.costIdr,
+      ref: 'depot:${depot.id}:${type.id}',
+    ));
+    final construction = FacilityConstruction(
+      type: type,
+      toLevel: next.level,
+      startedAt: now,
+      finishAt: now + next.buildHours * 3600,
+    );
+    depot.construction = construction;
+    queue.schedule(construction.finishAt, ConstructionFinished(depot.id));
+    _log(WorldLogKind.upgradeStarted, {'depot': depot.id, 'facility': type.id, 'level': next.level});
+    return construction;
+  }
+
+  void _onConstructionFinished(ConstructionFinished e) {
+    final depot = _depot(e.depotId);
+    final c = depot.construction;
+    if (c == null) return;
+    depot
+      ..levels[c.type] = c.toLevel
+      ..construction = null;
+    if (c.type == FacilityType.parking) {
+      depot.growSlots(facility(depot, FacilityType.parking).intStat('slots'));
+    }
+    _log(WorldLogKind.upgradeFinished, {'depot': depot.id, 'facility': c.type.id, 'level': c.toLevel});
+    // Kapasitas dock / gerbang bertambah: layani antrean yang menunggu.
+    _serveDockQueue(depot);
+    _serveGateQueue(depot);
+  }
+
+  // ---------------------------------------------------------------- armada & karyawan
+
+  List<PurchaseProblem> purchaseProblems(int depotId, String modelId) {
+    final model = content.vehicleModels[modelId];
+    return [
+      if (model == null) PurchaseProblem.unknownModel,
+      if (_depot(depotId).firstFreeSlot == null) PurchaseProblem.noFreeSlot,
+      if (model != null && cashIdr < model.priceIdr) PurchaseProblem.insufficientCash,
+    ];
+  }
+
+  /// Beli kendaraan baru; langsung menempati slot parkir kosong pertama.
+  Vehicle buyVehicle(int depotId, String modelId) {
+    final problems = purchaseProblems(depotId, modelId);
+    if (problems.isNotEmpty) throw CommandException(problems);
+    final depot = _depot(depotId);
+    final model = content.vehicleModels[modelId]!;
+    final slot = depot.firstFreeSlot!;
+    final vehicle = Vehicle(id: _nextId++, model: model, depotId: depot.id, slotIndex: slot);
+    depot.slots[slot] = vehicle.id;
+    vehicles[vehicle.id] = vehicle;
+    ledger.post(LedgerEntry(
+      time: now,
+      account: LedgerAccount.vehiclePurchase,
+      amountIdr: -model.priceIdr,
+      ref: 'vehicle:${vehicle.id}',
+    ));
+    _log(WorldLogKind.vehiclePurchased, {'vehicle': vehicle.id, 'model': model.id});
+    return vehicle;
+  }
+
+  List<HireProblem> hireProblems(int depotId) {
+    final depot = _depot(depotId);
+    return [if (staffCount(depot) >= staffMax(depot)) HireProblem.officeFull];
+  }
+
+  /// Rekrut karyawan. Sopir mendapat nama dari daftar konten (deterministik).
+  void hire(int depotId, EmployeeRole role) {
+    final problems = hireProblems(depotId);
+    if (problems.isNotEmpty) throw CommandException(problems);
+    final depot = _depot(depotId);
+    switch (role) {
+      case EmployeeRole.driver:
+        final id = _nextId++;
+        final names = content.employees.names;
+        final used = drivers.values.map((d) => d.name).toSet();
+        final rng = DeterministicRng.derive(seed, id, 0);
+        var name = names[rng.nextInt(names.length)];
+        for (var i = 0; i < names.length && used.contains(name); i++) {
+          name = names[(names.indexOf(name) + 1) % names.length];
+        }
+        drivers[id] = Driver(id: id, name: name, depotId: depot.id);
+        _log(WorldLogKind.employeeHired, {'role': role.id, 'driver': id});
+      case EmployeeRole.warehouseStaff:
+        depot.warehouseStaff++;
+        _log(WorldLogKind.employeeHired, {'role': role.id, 'count': depot.warehouseStaff});
+    }
+  }
+
+  /// Berhentikan satu staf gudang (bila ada).
+  void releaseWarehouseStaff(int depotId) {
+    final depot = _depot(depotId);
+    if (depot.warehouseStaff == 0) return;
+    depot.warehouseStaff--;
+    _log(WorldLogKind.employeeReleased, {'role': EmployeeRole.warehouseStaff.id, 'count': depot.warehouseStaff});
+  }
+
+  int dailyPayrollIdr() {
+    final wage = content.employees.dailyWageIdr;
+    final staff = depots.values.fold(0, (s, d) => s + d.warehouseStaff);
+    return drivers.length * wage[EmployeeRole.driver]! + staff * wage[EmployeeRole.warehouseStaff]!;
+  }
+
+  void _schedulePayroll() {
+    final sinceDayStart = (now + dayStartOffset) % daySeconds;
+    queue.schedule(now + daySeconds - sinceDayStart, const PayrollDue());
+  }
+
+  void _onPayroll() {
+    final amount = dailyPayrollIdr();
+    if (amount > 0) {
+      ledger.post(LedgerEntry(time: now, account: LedgerAccount.wages, amountIdr: -amount, ref: 'payroll'));
+      _log(WorldLogKind.payrollPaid, {'amount_idr': amount});
+    }
+    queue.schedule(now + daySeconds, const PayrollDue());
+  }
 
   // ---------------------------------------------------------------- kontrak
 
@@ -230,6 +466,7 @@ class SimWorld {
       final estimate = ops.slotToDockS +
           ops.loadingS(weightKg) +
           ops.dockToGateS +
+          gatePassS(depot) +
           travelTime.legSeconds(out, reference) +
           ops.unloadingS(weightKg);
       final allowed = math.max(eco.deadlineMinS, (estimate * eco.deadlineSlack).round());
@@ -259,6 +496,7 @@ class SimWorld {
   // ---------------------------------------------------------------- dispatch
 
   /// Periksa kelayakan & hitung estimasi tol / non-tol tanpa mengubah state.
+  /// Estimasi mengasumsikan dock & gerbang kosong; antrean menambah waktu.
   DispatchCheck check({required int contractId, required int vehicleId, required int driverId}) {
     final contract = _contract(contractId);
     final vehicle = _vehicle(vehicleId);
@@ -301,9 +539,9 @@ class SimWorld {
       outbound: TripLeg.fromRoute(quote.outboundRoute, quote.outboundS),
       inbound: TripLeg.fromRoute(quote.inboundRoute, quote.inboundS),
       startedAt: now,
-      phase: TripPhase.toDock,
+      phase: TripPhase.waitDock,
       phaseStart: now,
-      phaseEnd: now + content.depotOps.slotToDockS,
+      phaseEnd: now,
     );
     trips[trip.id] = trip;
     contract
@@ -311,7 +549,6 @@ class SimWorld {
       ..deadline = quote.deadline;
     vehicle.tripId = trip.id;
     driver.tripId = trip.id;
-    queue.schedule(trip.phaseEnd, TripPhaseEnded(trip.id, trip.phase));
     _log(WorldLogKind.dispatched, {
       'trip': trip.id,
       'contract': contractId,
@@ -319,6 +556,7 @@ class SimWorld {
       'driver': driverId,
       'mode': mode.name,
     });
+    _serveDockQueue(_depot(vehicle.depotId));
     return trip;
   }
 
@@ -334,7 +572,7 @@ class SimWorld {
     final outS = travelTime.legSeconds(out, loaded);
     final backS = travelTime.legSeconds(back, empty);
     final deadline = now + contract.allowedS;
-    final before = ops.slotToDockS + ops.loadingS(contract.weightKg) + ops.dockToGateS;
+    final before = ops.slotToDockS + loadingS(depot, contract.weightKg) + ops.dockToGateS + gatePassS(depot);
     final unloading = ops.unloadingS(contract.weightKg);
     final deliveryEta = now + before + outS + unloading;
     return DispatchQuote(
@@ -345,7 +583,7 @@ class SimWorld {
       inboundS: backS,
       beforeDepartureS: before,
       unloadingS: unloading,
-      afterReturnS: ops.gateInS + ops.gateToSlotS + ops.inspectionS,
+      afterReturnS: gatePassS(depot) + ops.gateToSlotS + ops.inspectionS,
       dispatchAt: now,
       deadline: deadline,
       revenueIdr: contract.settlementAt(deliveryEta, deadline: deadline),
@@ -363,8 +601,14 @@ class SimWorld {
   int advanceTo(int time) => queue.runUntil(time, _handle);
 
   void _handle(ScheduledEvent scheduled, EventQueue queue) {
-    final event = scheduled.event;
-    if (event is TripPhaseEnded) _onPhaseEnded(event);
+    switch (scheduled.event) {
+      case final TripPhaseEnded e:
+        _onPhaseEnded(e);
+      case final ConstructionFinished e:
+        _onConstructionFinished(e);
+      case PayrollDue():
+        _onPayroll();
+    }
   }
 
   void _onPhaseEnded(TripPhaseEnded e) {
@@ -373,14 +617,28 @@ class SimWorld {
     final contract = _contract(trip.contractId);
     final vehicle = _vehicle(trip.vehicleId);
     final driver = _driver(trip.driverId);
+    final depot = _depot(vehicle.depotId);
     final ref = 'trip:${trip.id}';
 
     switch (e.phase) {
+      case TripPhase.toDock:
+        _enter(trip, TripPhase.loading);
+      case TripPhase.loading:
+        trip.dock = null;
+        _enter(trip, TripPhase.toGate);
+        _serveDockQueue(depot);
       case TripPhase.toGate:
+        _enter(trip, TripPhase.waitGateOut);
+        _serveGateQueue(depot);
+      case TripPhase.gateOut:
+        trip.gateLane = null;
         _postCost(LedgerAccount.toll, trip.outbound.tollIdr, ref);
         _log(WorldLogKind.departedDepot, {'trip': trip.id, 'vehicle': vehicle.id});
+        _enter(trip, TripPhase.outbound);
+        _serveGateQueue(depot);
       case TripPhase.outbound:
         _finishLeg(trip.outbound, vehicle, driver, ref);
+        _enter(trip, TripPhase.unloading);
       case TripPhase.unloading:
         final settled = contract.settlementAt(now, deadline: contract.deadline!);
         contract
@@ -400,48 +658,96 @@ class SimWorld {
           'late': now > contract.deadline!,
         });
         _postCost(LedgerAccount.toll, trip.inbound.tollIdr, ref);
+        _enter(trip, TripPhase.inbound);
       case TripPhase.inbound:
         _finishLeg(trip.inbound, vehicle, driver, ref);
         _log(WorldLogKind.returnedToDepot, {'trip': trip.id, 'vehicle': vehicle.id});
+        _enter(trip, TripPhase.waitGateIn);
+        _serveGateQueue(depot);
+      case TripPhase.gateIn:
+        trip.gateLane = null;
+        _enter(trip, TripPhase.toSlot);
+        _serveGateQueue(depot);
+      case TripPhase.toSlot:
+        _enter(trip, TripPhase.inspection);
       case TripPhase.inspection:
         vehicle.tripId = null;
         driver.tripId = null;
         _log(WorldLogKind.tripCompleted, {'trip': trip.id, 'vehicle': vehicle.id});
-      case TripPhase.toDock:
-      case TripPhase.loading:
-      case TripPhase.gateIn:
-      case TripPhase.toSlot:
+        _enter(trip, TripPhase.completed);
+        _tracks.remove((trip.id, true));
+        _tracks.remove((trip.id, false));
+      case TripPhase.waitDock:
+      case TripPhase.waitGateOut:
+      case TripPhase.waitGateIn:
       case TripPhase.completed:
         break;
     }
-
-    trip
-      ..phase = e.phase.next
-      ..phaseStart = now;
-    if (trip.phase == TripPhase.completed) {
-      trip.phaseEnd = now;
-      _tracks.remove((trip.id, true));
-      _tracks.remove((trip.id, false));
-      return;
-    }
-    trip.phaseEnd = now + _phaseDuration(trip, contract);
-    queue.schedule(trip.phaseEnd, TripPhaseEnded(trip.id, trip.phase));
   }
 
-  int _phaseDuration(Trip trip, Contract contract) {
+  /// Masuk ke fase [phase] sekarang; jadwalkan akhirnya bila bukan antrean.
+  void _enter(Trip trip, TripPhase phase) {
+    trip
+      ..phase = phase
+      ..phaseStart = now;
+    if (phase.waiting || phase == TripPhase.completed) {
+      trip.phaseEnd = now;
+      return;
+    }
+    trip.phaseEnd = now + _phaseDuration(trip);
+    queue.schedule(trip.phaseEnd, TripPhaseEnded(trip.id, phase));
+  }
+
+  int _phaseDuration(Trip trip) {
     final ops = content.depotOps;
+    final contract = _contract(trip.contractId);
+    final depot = _depot(_vehicle(trip.vehicleId).depotId);
     return switch (trip.phase) {
       TripPhase.toDock => ops.slotToDockS,
-      TripPhase.loading => ops.loadingS(contract.weightKg),
+      TripPhase.loading => loadingS(depot, contract.weightKg),
       TripPhase.toGate => ops.dockToGateS,
+      TripPhase.gateOut || TripPhase.gateIn => gatePassS(depot),
       TripPhase.outbound => trip.outbound.durationS,
       TripPhase.unloading => ops.unloadingS(contract.weightKg),
       TripPhase.inbound => trip.inbound.durationS,
-      TripPhase.gateIn => ops.gateInS,
       TripPhase.toSlot => ops.gateToSlotS,
       TripPhase.inspection => ops.inspectionS,
-      TripPhase.completed => 0,
+      TripPhase.waitDock || TripPhase.waitGateOut || TripPhase.waitGateIn || TripPhase.completed => 0,
     };
+  }
+
+  Iterable<Trip> _activeTripsAt(Depot depot) =>
+      trips.values.where((t) => t.isActive && vehicles[t.vehicleId]!.depotId == depot.id);
+
+  /// Trip yang menunggu di antrean [phases], urut kedatangan (FIFO).
+  List<Trip> _waiting(Depot depot, Set<TripPhase> phases) =>
+      _activeTripsAt(depot).where((t) => phases.contains(t.phase)).toList()
+        ..sort((a, b) => a.phaseStart != b.phaseStart ? a.phaseStart.compareTo(b.phaseStart) : a.id.compareTo(b.id));
+
+  int? _free(int capacity, Iterable<int?> used) {
+    final taken = used.whereType<int>().toSet();
+    for (var i = 0; i < capacity; i++) {
+      if (!taken.contains(i)) return i;
+    }
+    return null;
+  }
+
+  void _serveDockQueue(Depot depot) {
+    for (final trip in _waiting(depot, const {TripPhase.waitDock})) {
+      final dock = _free(dockCount(depot), _activeTripsAt(depot).map((t) => t.dock));
+      if (dock == null) return;
+      trip.dock = dock;
+      _enter(trip, TripPhase.toDock);
+    }
+  }
+
+  void _serveGateQueue(Depot depot) {
+    for (final trip in _waiting(depot, const {TripPhase.waitGateOut, TripPhase.waitGateIn})) {
+      final lane = _free(gateLaneCount(depot), _activeTripsAt(depot).map((t) => t.gateLane));
+      if (lane == null) return;
+      trip.gateLane = lane;
+      _enter(trip, trip.phase == TripPhase.waitGateOut ? TripPhase.gateOut : TripPhase.gateIn);
+    }
   }
 
   void _finishLeg(TripLeg leg, Vehicle vehicle, Driver driver, String ref) {
@@ -472,7 +778,11 @@ class SimWorld {
     }
     final t = at ?? now;
     final span = trip.phaseEnd - trip.phaseStart;
-    final progress = span <= 0 ? 1.0 : ((t - trip.phaseStart) / span).clamp(0.0, 1.0);
+    final progress = trip.phase.waiting
+        ? 0.0
+        : span <= 0
+            ? 1.0
+            : ((t - trip.phaseStart) / span).clamp(0.0, 1.0);
     final contract = _contract(trip.contractId);
 
     TrackPose? pose;
@@ -485,6 +795,11 @@ class SimWorld {
       activity = VehicleActivity.atDestination;
       pose = TrackPose(graph.node(contract.destinationNode), 0);
     }
+    int? queuePosition;
+    if (trip.phase.waiting) {
+      final depot = _depot(vehicle.depotId);
+      queuePosition = _waiting(depot, {trip.phase}).indexOf(trip);
+    }
     return VehicleSnapshot(
       vehicleId: vehicleId,
       activity: activity,
@@ -493,6 +808,9 @@ class SimWorld {
       phase: trip.phase,
       phaseProgress: progress,
       pose: pose,
+      dock: trip.dock,
+      gateLane: trip.gateLane,
+      queuePosition: queuePosition,
     );
   }
 
@@ -516,7 +834,8 @@ class SimWorld {
 
   // ---------------------------------------------------------------- save
 
-  static const saveFormat = 1;
+  /// Format 2: fasilitas ber-level, antrean, karyawan, gaji harian.
+  static const saveFormat = 2;
 
   Map<String, dynamic> toJson() => {
         'format': saveFormat,
@@ -539,7 +858,7 @@ class SimWorld {
               'p': e.priority,
               'seq': e.seq,
               'type': e.event.type,
-              'data': (e.event as TripPhaseEnded).toJson(),
+              'data': (e.event as WorldEvent).toJson(),
             },
         ],
       };
@@ -550,8 +869,9 @@ class SimWorld {
     required GameContent content,
     TravelTimeModel travelTime = const RouteEstimateTravelTime(),
   }) {
-    if (json['format'] != saveFormat) {
-      throw FormatException('Format save tidak didukung: ${json['format']}');
+    final format = json['format'];
+    if (format != 1 && format != saveFormat) {
+      throw FormatException('Format save tidak didukung: $format');
     }
     List<Map<String, dynamic>> rows(String key) => (json[key] as List).cast<Map<String, dynamic>>();
     final queue = EventQueue(nextSeq: json['next_seq'] as int, processedUntil: json['now'] as int);
@@ -561,13 +881,10 @@ class SimWorld {
           time: e['t'] as int,
           priority: e['p'] as int,
           seq: e['seq'] as int,
-          event: switch (e['type']) {
-            TripPhaseEnded.typeName => TripPhaseEnded.fromJson(e['data'] as Map<String, dynamic>),
-            final other => throw FormatException('Tipe event tidak dikenal: $other'),
-          },
+          event: WorldEvent.fromJson(e['type'] as String, e['data'] as Map<String, dynamic>),
         ),
     ]);
-    return SimWorld._(
+    final world = SimWorld._(
       graph: graph,
       content: content,
       travelTime: travelTime,
@@ -585,6 +902,16 @@ class SimWorld {
       log: rows('log').map(WorldLogEntry.fromJson).toList(),
       nextId: json['next_id'] as int,
     );
+    if (format == 1) world._migrateFromV1();
+    return world;
+  }
+
+  /// Save v1 (Tahap 2b): belum ada gaji harian & dock/jalur gerbang di trip.
+  void _migrateFromV1() {
+    if (!queue.snapshot().any((e) => e.event is PayrollDue)) _schedulePayroll();
+    for (final t in trips.values) {
+      if (t.phase == TripPhase.toDock || t.phase == TripPhase.loading) t.dock ??= 0;
+    }
   }
 
   // ---------------------------------------------------------------- util

@@ -1,0 +1,14 @@
+{
+  "_comment": "Peran karyawan Tahap 3. Upah harian dibayar tiap pergantian hari game. Skill, kelelahan, mekanik, dispatcher di Tahap 4.",
+  "roles": [
+    {"id": "driver", "name": "Sopir", "daily_wage_idr": 160000},
+    {"id": "warehouse_staff", "name": "Staf gudang", "daily_wage_idr": 120000}
+  ],
+  "loading_staff_bonus": 0.3,
+  "loading_staff_max_effective": 3,
+  "loading_without_staff": 0.7,
+  "names": [
+    "Pak Slamet", "Budi", "Agus", "Dedi", "Joko", "Rudi", "Asep", "Wawan", "Hendra", "Yanto",
+    "Siti", "Dewi", "Rina", "Tono", "Ujang", "Bambang", "Eko", "Dadang", "Iwan", "Sri"
+  ]
+}

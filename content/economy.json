@@ -1,11 +1,11 @@
 {
-  "_comment": "Parameter ekonomi prototipe. Uang dalam rupiah (integer).",
-  "starting_cash_idr": 50000000,
+  "_comment": "Parameter ekonomi prototipe. Uang dalam rupiah (integer). Nilai sementara agar ekspansi Tahap 3 terjangkau; diseimbangkan ulang di Tahap 4.",
+  "starting_cash_idr": 150000000,
   "fuel_price_idr_per_l": 10000,
   "contract": {
-    "base_fee_idr": 60000,
-    "per_km_idr": 3500,
-    "per_ton_km_idr": 2500,
+    "base_fee_idr": 100000,
+    "per_km_idr": 6000,
+    "per_ton_km_idr": 3000,
     "deadline_slack": 2.0,
     "deadline_min_s": 10800,
     "late_penalty_per_hour_pct": 10

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
 import '../contracts/contracts_screen.dart';
 import '../depot/depot_screen.dart';
 import '../finance/finance_screen.dart';
+import '../fleet/fleet_screen.dart';
 import '../map/map_screen.dart';
 import 'log_text.dart';
 
@@ -78,8 +80,16 @@ class _GameScreenState extends State<GameScreen> {
               const SizedBox(width: 6),
               Text(formatGameClock(session.world.now),
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              if (GameSession.devTools) ...[
+                const SizedBox(width: 6),
+                ActionChip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text('${session.clock.speedMultiplier}×'),
+                  onPressed: session.cycleSpeed,
+                ),
+              ],
               const Spacer(),
-              const Icon(Icons.account_balance_wallet_rounded, size: 18, color: AppColors.accent),
+              const GlyphIcon(GameGlyph.finance, size: 20, color: AppColors.accent),
               const SizedBox(width: 6),
               Text(formatRupiah(session.world.cashIdr),
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
@@ -95,6 +105,7 @@ class _GameScreenState extends State<GameScreen> {
             DepotScreen(session: session, active: _tab == 0, onOpenContracts: () => _goTo(2)),
             MapScreen(session: session, active: _tab == 1),
             ContractsScreen(session: session, onShowMap: () => _goTo(1)),
+            FleetScreen(session: session),
             FinanceScreen(session: session),
           ],
         ),
@@ -102,10 +113,11 @@ class _GameScreenState extends State<GameScreen> {
           selectedIndex: _tab,
           onDestinationSelected: _goTo,
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.warehouse_outlined), selectedIcon: Icon(Icons.warehouse_rounded), label: 'Depot'),
-            NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map_rounded), label: 'Peta'),
-            NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment_rounded), label: 'Kontrak'),
-            NavigationDestination(icon: Icon(Icons.payments_outlined), selectedIcon: Icon(Icons.payments_rounded), label: 'Keuangan'),
+            NavigationDestination(icon: GlyphIcon(GameGlyph.depot), label: 'Depot'),
+            NavigationDestination(icon: GlyphIcon(GameGlyph.map), label: 'Peta'),
+            NavigationDestination(icon: GlyphIcon(GameGlyph.contracts), label: 'Kontrak'),
+            NavigationDestination(icon: GlyphIcon(GameGlyph.fleet), label: 'Armada'),
+            NavigationDestination(icon: GlyphIcon(GameGlyph.finance), label: 'Keuangan'),
           ],
         ),
       ),

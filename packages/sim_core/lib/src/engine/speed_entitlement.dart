@@ -14,3 +14,12 @@ class FreeSpeedEntitlement implements SpeedEntitlementProvider {
   @override
   Set<int> get allowedMultipliers => const {1};
 }
+
+/// Khusus pengujian (build DEV_TOOLS): 1×, 10×, 60× agar satu siklus penuh
+/// bisa diamati dalam hitungan detik. Bukan fitur pemain.
+class DevSpeedEntitlement implements SpeedEntitlementProvider {
+  const DevSpeedEntitlement();
+
+  @override
+  Set<int> get allowedMultipliers => const {1, 10, 60};
+}

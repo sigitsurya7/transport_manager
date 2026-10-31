@@ -70,3 +70,17 @@ Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Ara
 ## 2026-10-31 — Install via USB
 
 > Sudah ku aktifkan Install via USB, coba pasang lagi
+
+## 2026-10-31 — Tahap 3 + temuan uji HP
+
+> Lanjutkan ke Tahap 3,
+> Mobil sudah kembali namun saat masuk ke depot mobil malah mundur dan palang / gate tidak terbuka.
+
+## 2026-10-31 — Perbaikan aset 3D & ikon
+
+> Ada bangunan yang menutupi jalan.
+> Bedakan mobil pickup, mobil box, mobil container kecil dan lain sebagainya.
+>
+> Mobil menabrak bangunan, pastikan tidak ada bangunan atau properti lain yang menabrak.
+>
+> Buat aset itu terlebih dahulu. Dan untuk icon jangan generic.

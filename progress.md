@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 2b — core prototype dapat dimainkan dan sudah diuji di HP.** Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
+**Tahap 3 — depot simulation selesai** (antrean, upgrade + visual, pekerja, uji tabrakan). Tahap 2b selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -99,8 +99,34 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Perbaikan dari uji di HP: sumbu Z GLB terbalik di flutter_scene (posisi node & kamera dikonversi), arah hadap kendaraan, kamera awal kini memperlihatkan loading dock, ringkasan offline tidak muncul untuk jeda singkat tanpa kejadian.
 - [ ] Map pack baru Bandung (dari ubin Overpass, jalan utama). Kota lain menunggu ekstrak Jawa (unduhan dilanjutkan di latar belakang).
 
+### 2026-10-31 — Tahap 3: depot simulation
+
+**Simulasi (sim_core, 64 test):**
+- [x] Fasilitas ber-level dari `content/facilities.json`: parkir (3/5/8 slot + perluasan lahan), gerbang (manual → otomatis → multi-gate 2 jalur), loading dock (1/2/3 dock + leveler), gudang (150/320/650 m³), kantor (batas 4/10/20 karyawan). Statistik & modul visual dari data yang sama.
+- [x] **Antrean nyata**: loading dock & jalur gerbang adalah sumber daya terbatas; kendaraan antre FIFO (`waitDock`, `waitGateOut`, `waitGateIn`) dan antrean memperpanjang waktu operasi. Upgrade dock/gerbang langsung melayani antrean.
+- [x] Upgrade: bayar → konstruksi (jam game) → level naik; satu konstruksi per depot; fasilitas tetap beroperasi selama dibangun.
+- [x] Pekerja: staf gudang mempercepat muat (tanpa staf lebih lambat, efektif s.d. 3 orang); rekrut sopir & staf dibatasi kapasitas kantor; gaji harian tiap pukul 00.00.
+- [x] Beli kendaraan baru (butuh slot parkir kosong & kas). Katalog kini 4 jenis: pikap losbak, pikap box, mini truck, truk engkel kontainer 10 ft.
+- [x] Save format 2 + migrasi dari save Tahap 2b (diuji).
+- [x] Ekonomi prototipe sementara: modal 150 juta & tarif kontrak ±2× agar ekspansi terjangkau (penyeimbangan penuh di Tahap 4).
+
+**Visual & aset:**
+- [x] Depot modular: base + modul per level tiap fasilitas, berganti otomatis saat upgrade selesai; penanda konstruksi (kerucut & pembatas) selama dibangun.
+- [x] Palang gerbang terpisah & beranimasi: kendaraan berhenti di depan palang saat pemeriksaan, palang naik, lalu lewat (keluar & masuk). Multi-gate: dua palang.
+- [x] Jalur kendaraan realistis: masuk slot maju, keluar mundur; **mundur ke dock** (bak menghadap pintu gudang); antre keluar di jalur depan gerbang; antre masuk di lajur kiri jalan umum.
+- [x] Staf gudang tampil bolak-balik pintu ↔ bak saat muat; petugas jaga di pos gerbang.
+- [x] Model kendaraan dibedakan jelas (bentuk & warna sama dengan ikonnya).
+- [x] **Perbaikan dari uji HP**: kantor tidak lagi menutupi jalur; bak tidak masuk ke platform dock; palet tidak melayang; arah hadap kendaraan benar (`π − heading`).
+- [x] **Uji tabrakan otomatis**: generator mengekspor tapak semua bangunan/pagar/lampu/platform/palet; test app menjalankan 4 jenis kendaraan di semua fase, 8 slot, semua dock & jalur gerbang, semua kombinasi level → tidak ada tabrakan. Uji ini menemukan & memperbaiki: ayunan mundur menembus pagar barat & kantor, sudut bak menyenggol platform, multi-gate terlalu sempit (diperlebar), truk menembus pagar timur.
+
+**UI:**
+- [x] Tab Armada (kendaraan, beli, sopir, staf gudang, kapasitas kantor, gaji harian) & lembar Fasilitas (level, statistik saat ini vs berikutnya, biaya, lama bangun).
+- [x] **Ikon khusus**, bukan ikon generik: ikon kendaraan tampak samping per jenis, glyph navigasi/fasilitas/karyawan, logo app & **ikon peluncur Android** (dirender dari painter yang sama, `tool/render_icons_test.dart`).
+- [x] Perbaikan respons: layar statis baru diperbarui puluhan detik setelah diketuk (vsync ditahan untuk SurfaceView di HP uji). Diatasi dengan mode render TextureView; diuji 5/5 percobaan responsif < 1,2 detik.
+- [x] Build pengujian `--dart-define=DEV_TOOLS=true`: pengali kecepatan 1×/10×/60× (bukan fitur pemain).
+
 ## Berikutnya
 
-- [ ] Uji satu siklus penuh sampai kembali & parkir; ukur fps di layar depot & peta pada game sungguhan.
-- [ ] Bangun map pack 6 kota dari ekstrak Jawa (termasuk jalan residential) & verifikasi koordinat depot.
-- [ ] Setelah itu: **Tahap 3 — depot simulation** (antrean gerbang/dock, pekerja, upgrade fasilitas + visual).
+- [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.
+- [ ] Map pack 6 kota dari ekstrak Jawa (unduhan masih berjalan) & verifikasi koordinat depot.
+- [ ] **Tahap 4 — business simulation**: barang & warehouse inventory, supplier, karyawan lengkap (skill, kelelahan), maintenance & workshop, asuransi, kecelakaan, laporan keuangan; penyeimbangan ekonomi.

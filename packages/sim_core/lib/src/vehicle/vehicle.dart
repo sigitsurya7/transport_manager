@@ -13,6 +13,7 @@ class VehicleModel {
     required this.tollGolongan,
     required this.fuelLPer100Km,
     required this.priceIdr,
+    required this.visual,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> j) => VehicleModel(
@@ -25,6 +26,7 @@ class VehicleModel {
         tollGolongan: (j['toll_golongan'] as num).toInt(),
         fuelLPer100Km: (j['fuel_l_per_100km'] as num).toDouble(),
         priceIdr: (j['price_idr'] as num).toInt(),
+        visual: j['visual'] as String,
       );
 
   static Map<String, VehicleModel> catalogFromJson(Map<String, dynamic> json) => {
@@ -41,6 +43,9 @@ class VehicleModel {
   final int tollGolongan;
   final double fuelLPer100Km;
   final int priceIdr;
+
+  /// Nama model 3D (GLB) untuk renderer.
+  final String visual;
 
   VehicleProfile profile({int cargoKg = 0}) => VehicleProfile(
         vehicleClass: vehicleClass,

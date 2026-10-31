@@ -1,5 +1,7 @@
 import '../contracts/contract.dart';
 import '../contracts/contract_tiers.dart';
+import '../depot/facilities.dart';
+import '../employees/employee_config.dart';
 import '../finance/economy_config.dart';
 import '../trips/depot_ops_config.dart';
 import '../vehicle/vehicle.dart';
@@ -14,6 +16,8 @@ class GameContent {
     required this.storeCustomers,
     required this.economy,
     required this.depotOps,
+    required this.facilities,
+    required this.employees,
   });
 
   /// [files]: isi JSON per nama file di `content/`.
@@ -27,6 +31,8 @@ class GameContent {
       storeCustomers: (f('customers.json')['store_to_store'] as List).cast<String>(),
       economy: EconomyConfig.fromJson(f('economy.json')),
       depotOps: DepotOpsConfig.fromJson(f('depot_ops.json')),
+      facilities: FacilityCatalog.fromJson(f('facilities.json')),
+      employees: EmployeeConfig.fromJson(f('employees.json')),
     );
     if (content.storeCustomers.isEmpty) throw const FormatException('Daftar pelanggan kosong');
     if (content.cargoTypes.isEmpty) throw const FormatException('Katalog barang kosong');
@@ -40,6 +46,8 @@ class GameContent {
     'customers.json',
     'economy.json',
     'depot_ops.json',
+    'facilities.json',
+    'employees.json',
   ];
 
   final ContractTierRules tierRules;
@@ -48,4 +56,6 @@ class GameContent {
   final List<String> storeCustomers;
   final EconomyConfig economy;
   final DepotOpsConfig depotOps;
+  final FacilityCatalog facilities;
+  final EmployeeConfig employees;
 }

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:sim_core/sim_core.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
 
 const phaseLabel = {
-  TripPhase.toDock: 'Menuju loading area',
+  TripPhase.waitDock: 'Antre loading dock',
+  TripPhase.toDock: 'Menuju loading dock',
   TripPhase.loading: 'Memuat barang',
   TripPhase.toGate: 'Menuju gerbang',
+  TripPhase.waitGateOut: 'Antre di gerbang',
+  TripPhase.gateOut: 'Pemeriksaan gerbang keluar',
   TripPhase.outbound: 'Dalam perjalanan ke tujuan',
   TripPhase.unloading: 'Bongkar di tujuan',
   TripPhase.inbound: 'Kembali ke depot',
-  TripPhase.gateIn: 'Masuk gerbang depot',
+  TripPhase.waitGateIn: 'Antre masuk depot',
+  TripPhase.gateIn: 'Pemeriksaan gerbang masuk',
   TripPhase.toSlot: 'Menuju slot parkir',
   TripPhase.inspection: 'Pemeriksaan kendaraan',
   TripPhase.completed: 'Selesai',
@@ -32,14 +37,17 @@ class TripCard extends StatelessWidget {
     final contract = world.contracts[trip.contractId]!;
     final vehicle = world.vehicles[trip.vehicleId]!;
     final snap = world.vehicleSnapshot(vehicle.id);
-    final phases = TripPhase.values.where((p) => p != TripPhase.completed).toList();
-    final overall = (phases.indexOf(trip.phase) + snap.phaseProgress) / phases.length;
+    final phases = TripPhase.values.where((p) => p != TripPhase.completed && !p.waiting).toList();
+    final index = phases.indexOf(trip.phase);
+    // Fase antrean: tampilkan progres fase sebelumnya yang sudah selesai.
+    final done = index >= 0 ? index + snap.phaseProgress : phases.indexOf(TripPhase.values[trip.phase.index + 1]).toDouble();
+    final overall = done / phases.length;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.local_shipping_rounded, color: AppColors.accent),
+            VehicleIcon(vehicle.model.visual, width: 44),
             const SizedBox(width: 8),
             Expanded(
               child: Text('${vehicle.model.name} → ${contract.customer}',
@@ -50,7 +58,7 @@ class TripCard extends StatelessWidget {
                 tooltip: 'Lihat di peta',
                 visualDensity: VisualDensity.compact,
                 onPressed: onShowMap,
-                icon: const Icon(Icons.map_rounded, size: 20),
+                icon: const GlyphIcon(GameGlyph.map, size: 20),
               ),
           ]),
           const SizedBox(height: 4),
@@ -65,7 +73,8 @@ class TripCard extends StatelessWidget {
             Text('Tenggat ${formatGameTime(contract.deadline!, fromSimSeconds: world.now)}',
                 style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
             const Spacer(),
-            Text('Fase selesai ${formatGameTime(trip.phaseEnd)}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            Text(trip.phase.waiting ? 'Menunggu antrean' : 'Fase selesai ${formatGameTime(trip.phaseEnd)}',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ]),
         ]),
       ),

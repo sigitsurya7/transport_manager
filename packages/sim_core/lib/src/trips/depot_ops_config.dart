@@ -1,7 +1,7 @@
 /// Durasi aktivitas depot & bongkar muat (`content/depot_ops.json`), detik game.
 ///
-/// Tahap 2b: durasi tetap. Tahap 3 menambah antrean gerbang/dock dan
-/// pengaruh jumlah pekerja serta level fasilitas.
+/// Waktu lewat gerbang ditentukan level gerbang (`facilities.json`); waktu
+/// muat di depot dipercepat level dock & staf gudang (lihat `SimWorld`).
 class DepotOpsConfig {
   const DepotOpsConfig({
     this.slotToDockS = 120,
@@ -10,7 +10,6 @@ class DepotOpsConfig {
     this.dockToGateS = 60,
     this.unloadingBaseS = 600,
     this.unloadingPerTonS = 900,
-    this.gateInS = 60,
     this.gateToSlotS = 120,
     this.inspectionS = 600,
   });
@@ -24,7 +23,6 @@ class DepotOpsConfig {
       dockToGateS: v('dock_to_gate_s'),
       unloadingBaseS: v('unloading_base_s'),
       unloadingPerTonS: v('unloading_per_ton_s'),
-      gateInS: v('gate_in_s'),
       gateToSlotS: v('gate_to_slot_s'),
       inspectionS: v('inspection_s'),
     );
@@ -36,7 +34,6 @@ class DepotOpsConfig {
   final int dockToGateS;
   final int unloadingBaseS;
   final int unloadingPerTonS;
-  final int gateInS;
   final int gateToSlotS;
   final int inspectionS;
 

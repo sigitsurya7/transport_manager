@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sim_core/sim_core.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
@@ -34,8 +35,10 @@ class _DispatchSheet extends StatefulWidget {
 }
 
 class _DispatchSheetState extends State<_DispatchSheet> {
-  late Vehicle _vehicle = widget.session.world.vehicles.values.first;
-  late Driver _driver = widget.session.world.drivers.values.first;
+  late Vehicle _vehicle = widget.session.world.vehicles.values
+      .firstWhere((v) => v.isAvailable, orElse: () => widget.session.world.vehicles.values.first);
+  late Driver _driver = widget.session.world.drivers.values
+      .firstWhere((d) => d.isAvailable, orElse: () => widget.session.world.drivers.values.first);
   RouteMode? _mode;
 
   @override
@@ -63,7 +66,7 @@ class _DispatchSheetState extends State<_DispatchSheet> {
               style: const TextStyle(color: AppColors.textMuted)),
           const SizedBox(height: 16),
           _Picker<Vehicle>(
-            icon: Icons.local_shipping_rounded,
+            icon: VehicleIcon(_vehicle.model.visual, width: 40),
             items: session.world.vehicles.values.toList(),
             value: _vehicle,
             label: (v) => '${v.model.name} · ${formatKg(v.model.payloadKg)}',
@@ -72,7 +75,7 @@ class _DispatchSheetState extends State<_DispatchSheet> {
           ),
           const SizedBox(height: 8),
           _Picker<Driver>(
-            icon: Icons.person_rounded,
+            icon: const GlyphIcon(GameGlyph.driver, size: 22),
             items: session.world.drivers.values.toList(),
             value: _driver,
             label: (d) => d.name,
@@ -196,7 +199,7 @@ class _Picker<T> extends StatelessWidget {
     required this.onChanged,
   });
 
-  final IconData icon;
+  final Widget icon;
   final List<T> items;
   final T value;
   final String Function(T) label;
@@ -208,7 +211,8 @@ class _Picker<T> extends StatelessWidget {
         initialValue: value,
         isExpanded: true,
         decoration: InputDecoration(
-          prefixIcon: Icon(icon),
+          prefixIcon: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: icon),
+          prefixIconConstraints: const BoxConstraints(minWidth: 60, minHeight: 40),
           border: const OutlineInputBorder(),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),

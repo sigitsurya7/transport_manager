@@ -3,13 +3,29 @@ import 'dart:math' as math;
 
 import 'package:sim_core/sim_core.dart';
 
-/// Titik di lantai depot (meter). x = timur, z = selatan (gerbang di +z).
+/// Titik di lantai depot (meter). x = timur, z = selatan; jalan umum di +z.
 typedef FloorPoint = ({double x, double z});
 
-/// Posisi + arah hadap. [heading] radian, 0 = menghadap +x (arah model pikap).
+/// Posisi + arah hadap. [heading] radian, 0 = menghadap +x (arah model kendaraan).
 typedef FloorPose = ({double x, double z, double heading});
 
-/// Titik-titik penting depot dari `depot_layout.json` (dibuat bersama depot.glb).
+/// Arah hadap untuk hidung ke -z (masuk slot / menjauhi jalan).
+const headingNorth = math.pi / 2;
+
+/// Arah hadap untuk hidung ke +z (keluar dari dock / menuju jalan).
+const headingSouth = -math.pi / 2;
+
+class BoomSpec {
+  const BoomSpec({required this.hinge, required this.model, required this.side});
+
+  final FloorPoint hinge;
+  final String model;
+
+  /// +1 palang memanjang ke +x, -1 ke -x.
+  final int side;
+}
+
+/// Titik penting depot dari `depot_layout.json` (dibuat bersama modul GLB).
 class DepotLayout {
   DepotLayout._(this.json);
 
@@ -17,35 +33,60 @@ class DepotLayout {
 
   final Map<String, dynamic> json;
 
-  FloorPoint _p(String key) {
-    final l = (json[key] as List).cast<num>();
+  static FloorPoint _pt(Object? v) {
+    final l = (v as List).cast<num>();
     return (x: l[0].toDouble(), z: l[1].toDouble());
   }
 
-  FloorPoint get outside => _p('outside');
-  FloorPoint get gate => _p('gate');
+  FloorPoint get outside => _pt(json['outside']);
+  FloorPoint get gate => _pt(json['gate']);
   double get laneZ => (json['lane_z'] as num).toDouble();
-  FloorPoint get dockStop => _p('dock_stop');
-  List<FloorPoint> get slots => [
-        for (final s in (json['parking_slots'] as List).cast<List>())
-          (x: (s[0] as num).toDouble(), z: (s[1] as num).toDouble()),
+  double get roadLaneZ => (json['road_lane_z'] as num).toDouble();
+  List<FloorPoint> get slots => [for (final s in json['parking_slots'] as List) _pt(s)];
+
+  List<FloorPoint> docks(int level) => [for (final d in (json['docks'] as Map)['$level'] as List) _pt(d)];
+
+  List<double> gateLanes(int level) =>
+      [for (final x in (json['gate_lanes'] as Map)['$level'] as List) (x as num).toDouble()];
+
+  List<BoomSpec> booms(int level) => [
+        for (final b in ((json['booms'] as Map)['$level'] as List).cast<Map<String, dynamic>>())
+          BoomSpec(hinge: _pt(b['hinge']), model: b['model'] as String, side: (b['side'] as num).toInt()),
       ];
+
+  FloorPoint anchor(FacilityType type) => _pt((json['anchors'] as Map)[type.id]);
+
+  /// Rintangan lantai per modul GLB: (x0, z0, x1, z1).
+  List<(double, double, double, double)> obstacles(String model) => [
+        for (final b in ((json['obstacles'] as Map)[model] as List?) ?? const [])
+          ((b[0] as num).toDouble(), (b[1] as num).toDouble(), (b[2] as num).toDouble(), (b[3] as num).toDouble()),
+      ];
+
+  /// Tapak kendaraan (koordinat model): (xMin, xMax, zMin, zMax).
+  (double, double, double, double) vehicleBounds(String visual) {
+    final b = ((json['vehicle_bounds'] as Map)[visual] as List).cast<num>();
+    return (b[0].toDouble(), b[1].toDouble(), b[2].toDouble(), b[3].toDouble());
+  }
 }
 
 /// Satu titik jalur; [reverse] = segmen menuju titik ini ditempuh mundur.
 typedef PathPoint = ({FloorPoint p, bool reverse});
 
-/// Jalur terbuka, posisi sebagai fungsi fraksi jarak (0..1) dengan
-/// percepatan/perlambatan halus dan belokan yang tidak patah.
+PathPoint fw(double x, double z) => (p: (x: x, z: z), reverse: false);
+PathPoint rv(double x, double z) => (p: (x: x, z: z), reverse: true);
+
+/// Jalur terbuka, posisi sebagai fungsi fraksi (0..1) dengan percepatan /
+/// perlambatan halus dan belokan yang tidak patah.
 class DepotPath {
-  DepotPath(this.start, this.points) {
+  DepotPath(this.start, this.points, {double? startHeading}) {
     var prev = start;
     for (final pt in points) {
       final len = math.sqrt(math.pow(pt.p.x - prev.x, 2) + math.pow(pt.p.z - prev.z, 2));
       _lengths.add(len);
-      _headings.add(_heading(prev, pt.p, pt.reverse));
+      _headings.add(len < 1e-6 && _headings.isNotEmpty ? _headings.last : _heading(prev, pt.p, pt.reverse));
       prev = pt.p;
     }
+    _startHeading = startHeading ?? (_headings.isEmpty ? 0 : _headings.first);
     length = _lengths.fold(0.0, (a, b) => a + b);
   }
 
@@ -53,7 +94,11 @@ class DepotPath {
   final List<PathPoint> points;
   final _lengths = <double>[];
   final _headings = <double>[];
+  late final double _startHeading;
   late final double length;
+
+  FloorPoint get end => points.isEmpty ? start : points.last.p;
+  double get endHeading => _headings.isEmpty ? _startHeading : _headings.last;
 
   static const _turnBlendM = 2.0;
 
@@ -63,7 +108,7 @@ class DepotPath {
   }
 
   FloorPose poseAt(double fraction) {
-    if (points.isEmpty || length == 0) return (x: start.x, z: start.z, heading: _headings.isEmpty ? math.pi / 2 : _headings.first);
+    if (points.isEmpty || length == 0) return (x: end.x, z: end.z, heading: endHeading);
     final f = fraction.clamp(0.0, 1.0);
     final eased = f * f * (3 - 2 * f); // smoothstep: mulai & berhenti pelan
     var d = eased * length;
@@ -74,8 +119,9 @@ class DepotPath {
         final t = seg == 0 ? 1.0 : (d / seg).clamp(0.0, 1.0);
         final p = points[i].p;
         var heading = _headings[i];
-        if (i > 0 && d < _turnBlendM) {
-          heading = _lerpAngle(_headings[i - 1], heading, 0.5 + 0.5 * d / _turnBlendM);
+        final before = i == 0 ? _startHeading : _headings[i - 1];
+        if (d < _turnBlendM) {
+          heading = _lerpAngle(before, heading, i == 0 ? d / _turnBlendM : 0.5 + 0.5 * d / _turnBlendM);
         } else if (i < points.length - 1 && seg - d < _turnBlendM) {
           heading = _lerpAngle(heading, _headings[i + 1], 0.5 * (1 - (seg - d) / _turnBlendM));
         }
@@ -95,45 +141,108 @@ class DepotPath {
   }
 }
 
-/// Pose kendaraan di dalam depot untuk tiap fase trip. Fase di jalan / di
-/// pelanggan → `null` (kendaraan tidak terlihat di depot).
+/// Lewat gerbang: mendekat & berhenti di depan palang, menunggu pemeriksaan,
+/// lalu melaju setelah palang terbuka. Fraksi waktu per tahap:
+const _approachEnd = 0.3, _checkEnd = 0.6;
+
+/// Bukaan palang (0 tertutup, 1 terbuka) selama fase lewat gerbang.
+double boomOpenAt(double progress) {
+  double ramp(double a, double b, double x) => ((x - a) / (b - a)).clamp(0.0, 1.0);
+  return ramp(_checkEnd - 0.1, _checkEnd, progress) * (1 - ramp(0.88, 1.0, progress));
+}
+
+FloorPose _staged(DepotPath approach, DepotPath drive, double progress) {
+  if (progress < _approachEnd) return approach.poseAt(progress / _approachEnd);
+  if (progress < _checkEnd) return approach.poseAt(1);
+  return drive.poseAt((progress - _checkEnd) / (1 - _checkEnd));
+}
+
+/// Pose kendaraan di dalam & di depan depot untuk tiap fase trip. Fase di
+/// jalan jauh / di pelanggan → `null` (tidak terlihat di depot).
 class DepotMotion {
   DepotMotion(this.layout);
 
   final DepotLayout layout;
 
-  /// Parkir: hidung menghadap jalur (+z) agar siap keluar.
-  static const parkedHeading = -math.pi / 2;
+  static const _outQueueX = 3.5, _outQueueGap = 5.5;
+  static const _inQueueX = -9.0, _inQueueGap = 6.5;
 
   FloorPose parked(int slot) {
     final s = layout.slots[slot];
-    return (x: s.x, z: s.z, heading: parkedHeading);
+    return (x: s.x, z: s.z, heading: headingNorth);
   }
 
-  FloorPose? pose(int slot, TripPhase? phase, double progress) {
-    final s = layout.slots[slot];
-    final lane = layout.laneZ;
-    final dock = layout.dockStop;
-    final gate = layout.gate;
-    final out = layout.outside;
-    PathPoint fw(double x, double z) => (p: (x: x, z: z), reverse: false);
-    PathPoint rv(double x, double z) => (p: (x: x, z: z), reverse: true);
+  FloorPoint _outQueueSpot(int q) => (x: _outQueueX + _outQueueGap * q, z: layout.laneZ);
+  FloorPoint _inQueueSpot(int q) => (x: _inQueueX - _inQueueGap * q, z: layout.roadLaneZ);
 
-    return switch (phase) {
-      null || TripPhase.completed => parked(slot),
-      TripPhase.inspection => parked(slot),
-      TripPhase.toDock => DepotPath(s, [fw(s.x, lane), fw(dock.x, lane), fw(dock.x, dock.z)]).poseAt(progress),
-      TripPhase.loading => (x: dock.x, z: dock.z, heading: math.pi / 2),
-      TripPhase.toGate => DepotPath(dock, [rv(dock.x, lane), fw(gate.x, lane), fw(gate.x, gate.z), fw(out.x, out.z)])
-          .poseAt(progress),
-      TripPhase.outbound || TripPhase.unloading || TripPhase.inbound => null,
-      TripPhase.gateIn => DepotPath(out, [fw(gate.x, gate.z), fw(gate.x, lane + 1)]).poseAt(progress),
-      TripPhase.toSlot => DepotPath((x: gate.x, z: lane + 1), [
-          fw(gate.x, lane),
-          fw(s.x - 5, lane),
-          rv(s.x, lane - 2),
-          rv(s.x, s.z),
-        ]).poseAt(progress),
-    };
+  /// [snap]: keadaan kendaraan; [dockLevel]/[gateLevel]: level fasilitas saat
+  /// ini; [outQueueAhead]: jumlah kendaraan yang sudah antre keluar (untuk
+  /// menentukan tempat berhenti kendaraan yang sedang menuju antrean).
+  FloorPose? pose(
+    VehicleSnapshot snap, {
+    required int dockLevel,
+    required int gateLevel,
+    int outQueueAhead = 0,
+  }) {
+    final s = layout.slots[snap.slotIndex.clamp(0, layout.slots.length - 1)];
+    final lane = layout.laneZ;
+    final docks = layout.docks(dockLevel);
+    final dock = docks[(snap.dock ?? 0).clamp(0, docks.length - 1)];
+    final lanes = layout.gateLanes(gateLevel);
+    final gx = lanes[(snap.gateLane ?? 0).clamp(0, lanes.length - 1)];
+    final gz = layout.gate.z;
+    final road = layout.roadLaneZ;
+    final p = snap.phaseProgress;
+
+    switch (snap.phase) {
+      case null || TripPhase.completed || TripPhase.inspection || TripPhase.waitDock:
+        return parked(snap.slotIndex);
+      case TripPhase.toDock:
+        // Mundur keluar slot, maju melewati dock, lalu mundur ke dock.
+        return DepotPath(s, [
+          rv(s.x, lane - 1.5),
+          // Ayunan mundur kecil: bak tidak menyentuh pagar barat maupun kantor.
+          rv(s.x - 1.0, lane),
+          fw(dock.x + 1.8, lane),
+          rv(dock.x + 0.2, lane - 2.0),
+          // Bagian akhir lurus agar bak tepat di depan platform tanpa menyenggol.
+          rv(dock.x, lane - 3.5),
+          rv(dock.x, dock.z),
+        ], startHeading: headingNorth)
+            .poseAt(p);
+      case TripPhase.loading:
+        return (x: dock.x, z: dock.z, heading: headingSouth);
+      case TripPhase.toGate:
+        final spot = _outQueueSpot(outQueueAhead);
+        return DepotPath(dock, [fw(dock.x, lane - 1.5), fw(spot.x, spot.z)], startHeading: headingSouth).poseAt(p);
+      case TripPhase.waitGateOut:
+        final spot = _outQueueSpot(snap.queuePosition ?? 0);
+        return (x: spot.x, z: spot.z, heading: math.pi);
+      case TripPhase.gateOut:
+        final spot = _outQueueSpot(0);
+        final approach = DepotPath(spot, [fw(gx + 1.5, lane), fw(gx, lane + 2.0), fw(gx, gz - 3.2)]);
+        // Lurus melewati gerbang sampai bak lepas dari pilar, baru belok ke lajur kiri.
+        final drive = DepotPath((x: gx, z: gz - 3.2), [fw(gx, gz + 4.2), fw(gx + 4.0, road), fw(gx + 40, road)]);
+        return _staged(approach, drive, p);
+      case TripPhase.outbound || TripPhase.unloading || TripPhase.inbound:
+        return null;
+      case TripPhase.waitGateIn:
+        final spot = _inQueueSpot(snap.queuePosition ?? 0);
+        return (x: spot.x, z: spot.z, heading: 0);
+      case TripPhase.gateIn:
+        final start = _inQueueSpot(0);
+        // Belok dari lajur kiri, lalu lurus beberapa meter sebelum berhenti di palang.
+        final approach = DepotPath(start, [fw(gx - 4.5, road), fw(gx, gz + 5.8), fw(gx, gz + 3.2)], startHeading: 0);
+        final drive = DepotPath((x: gx, z: gz + 3.2), [fw(gx, gz - 2.5), fw(gx, lane + 1.5)]);
+        return _staged(approach, drive, p);
+      case TripPhase.toSlot:
+        final start = (x: gx, z: lane + 1.5);
+        final pts = <PathPoint>[fw(gx, lane + 0.5)];
+        if (s.x + 3.5 < gx - 1) pts.add(fw(s.x + 3.5, lane));
+        pts
+          ..add(fw(s.x, lane - 3.0))
+          ..add(fw(s.x, s.z));
+        return DepotPath(start, pts, startHeading: headingNorth).poseAt(p);
+    }
   }
 }

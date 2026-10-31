@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:persistence/persistence.dart';
 
+import '../../widgets/game_icons.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../game/game_session.dart';
@@ -71,7 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
           children: [
-            const Icon(Icons.local_shipping_rounded, size: 52, color: AppColors.accent),
+            const Align(alignment: Alignment.centerLeft, child: AppLogo(size: 72)),
             const SizedBox(height: 12),
             Text('Transport Manager',
                 style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.w800)),
@@ -81,7 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 28),
             FilledButton.icon(
               onPressed: ready && !_busy ? _newGame : null,
-              icon: const Icon(Icons.add_road_rounded),
+              icon: const GlyphIcon(GameGlyph.depot, color: AppColors.onAccent),
               label: const Text('Permainan baru'),
             ),
             if (data.hasError || store.hasError)
