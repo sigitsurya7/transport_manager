@@ -28,18 +28,17 @@ class RoadStyle {
   final double minScale;
 }
 
-enum RoadGroup { minor, tertiary, secondary, primary, toll }
+enum RoadGroup { minor, tertiary, secondary, primary }
 
 const roadStyles = {
   RoadGroup.minor: RoadStyle(Color(0xFF34414E), 1.0, 0.25),
   RoadGroup.tertiary: RoadStyle(Color(0xFF465665), 1.4, 0.06),
   RoadGroup.secondary: RoadStyle(AppColors.road, 1.8, 0.0),
   RoadGroup.primary: RoadStyle(Color(0xFF8C9AA8), 2.4, 0.0),
-  RoadGroup.toll: RoadStyle(AppColors.toll, 3.0, 0.0),
 };
 
 RoadGroup groupOf(RoadEdge e) {
-  if (e.isToll) return RoadGroup.toll;
+  // Jalan tol digambar seperti jalan utama: peta netral, sorotan hanya untuk rute aktif.
   return switch (e.roadClass) {
     RoadClass.motorway || RoadClass.motorwayLink || RoadClass.trunk || RoadClass.trunkLink || RoadClass.primary || RoadClass.primaryLink =>
       RoadGroup.primary,

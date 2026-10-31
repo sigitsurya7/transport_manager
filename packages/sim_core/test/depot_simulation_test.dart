@@ -177,6 +177,16 @@ void main() {
     });
   });
 
+  test('mode dev menambah kas lewat akun terpisah', () {
+    final w = newWorld();
+    final before = w.cashIdr;
+    w.devGrant(100000000);
+    expect(w.cashIdr, before + 100000000);
+    expect(w.ledger.total(LedgerAccount.devAdjustment), 100000000);
+    expect(w.ledger.total(LedgerAccount.contractRevenue), 0);
+    expect(() => w.devGrant(0), throwsArgumentError);
+  });
+
   test('beli kendaraan menempati slot kosong; parkir penuh ditolak', () {
     final w = newWorld();
     addCash(w, 2000000000);

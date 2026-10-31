@@ -11,7 +11,7 @@ import 'package:transport_manager/features/depot/depot_paths.dart';
 void main() {
   final layout = DepotLayout.parse(File('assets/models/depot_layout.json').readAsStringSync());
   final motion = DepotMotion(layout);
-  const vehicles = ['pickup_open', 'pickup', 'mini_truck', 'container_truck'];
+  const vehicles = ['pickup_open', 'box_car', 'mini_truck', 'engkel_truck', 'container_truck'];
   const slotsPerLevel = {1: 3, 2: 5, 3: 8};
   const samples = 120;
 
@@ -75,6 +75,7 @@ void main() {
             // Gudang & kantor: uji terhadap semua level sekaligus (paling ketat).
             final obstacles = {
               'base': layout.obstacles('base'),
+              'props': layout.obstacles('props'),
               'parking_$parkingLevel': layout.obstacles('parking_$parkingLevel'),
               'gate_$gateLevel': layout.obstacles('gate_$gateLevel'),
               'dock_$dockLevel': layout.obstacles('dock_$dockLevel'),
@@ -131,7 +132,7 @@ void main() {
   }
 
   test('penanda konstruksi tidak berada di jalur kendaraan', () {
-    final pickup = layout.vehicleBounds('pickup');
+    final pickup = layout.vehicleBounds('box_car');
     final marker = layout.obstacles('construction').single;
     for (final type in FacilityType.values) {
       final a = layout.anchor(type);

@@ -1,5 +1,16 @@
 /// Akun buku besar. Laporan laba rugi Tahap 4 disusun dari entri ini.
-enum LedgerAccount { openingBalance, contractRevenue, fuel, toll, wages, vehiclePurchase, facilityUpgrade }
+enum LedgerAccount {
+  openingBalance,
+  contractRevenue,
+  fuel,
+  toll,
+  wages,
+  vehiclePurchase,
+  facilityUpgrade,
+
+  /// Dana tambahan dari mode pengembang (build DEV_TOOLS); bukan pendapatan.
+  devAdjustment,
+}
 
 class LedgerEntry {
   const LedgerEntry({

@@ -8,26 +8,59 @@ import 'package:sim_core/sim_core.dart';
 
 // ------------------------------------------------------------------ kendaraan
 
-class _VehicleStyle {
-  const _VehicleStyle(this.cab, this.body, {this.accent, this.kind = _Body.box, this.axles = const [15, 50]});
+enum _Cab { nosed, semi, flat }
 
-  final Color cab;
-  final Color body;
+enum _Body { openBed, box, tallBox, woodBed, container }
+
+class _VehicleStyle {
+  const _VehicleStyle({
+    required this.cab,
+    required this.cabColor,
+    required this.body,
+    required this.bodyColor,
+    this.accent,
+    this.axles = const [15, 50],
+    this.dualRear = false,
+  });
+
+  final _Cab cab;
+  final Color cabColor;
+  final _Body body;
+  final Color bodyColor;
   final Color? accent;
-  final _Body kind;
 
   /// Posisi roda (x, satuan 64×32).
   final List<double> axles;
+  final bool dualRear;
 }
 
-enum _Body { openBed, box, tallBox, container }
-
+/// Warna & bentuk sama dengan model 3D (`tools/depot_glb`).
 const _vehicleStyles = {
-  'pickup_open': _VehicleStyle(Color(0xFFF5F5F2), Color(0xFF8D939A), kind: _Body.openBed),
-  'pickup': _VehicleStyle(Color(0xFFF5F5F2), Color(0xFFF0F0EC), accent: Color(0xFFF2B630)),
-  'mini_truck': _VehicleStyle(Color(0xFF2F6DB5), Color(0xFFF0F0EC), accent: Color(0xFFF2B630), kind: _Body.tallBox, axles: [13, 51]),
-  'container_truck':
-      _VehicleStyle(Color(0xFFC8432F), Color(0xFF2E7D7A), kind: _Body.container, axles: [10, 18.5, 54]),
+  'pickup_open': _VehicleStyle(
+      cab: _Cab.nosed, cabColor: Color(0xFFF5F5F2), body: _Body.openBed, bodyColor: Color(0xFF8D939A), axles: [14, 49]),
+  'box_car': _VehicleStyle(
+      cab: _Cab.semi, cabColor: Color(0xFFB7BEC6), body: _Body.box, bodyColor: Color(0xFFE9ECEF), accent: Color(0xFFF2B630)),
+  'mini_truck': _VehicleStyle(
+      cab: _Cab.flat,
+      cabColor: Color(0xFF2F6DB5),
+      body: _Body.tallBox,
+      bodyColor: Color(0xFFF0F0EC),
+      accent: Color(0xFF2F6DB5),
+      axles: [13, 52]),
+  'engkel_truck': _VehicleStyle(
+      cab: _Cab.flat,
+      cabColor: Color(0xFFE8A623),
+      body: _Body.woodBed,
+      bodyColor: Color(0xFFB8895A),
+      axles: [15, 54],
+      dualRear: true),
+  'container_truck': _VehicleStyle(
+      cab: _Cab.flat,
+      cabColor: Color(0xFFC8432F),
+      body: _Body.container,
+      bodyColor: Color(0xFF2E7D7A),
+      axles: [15, 54],
+      dualRear: true),
 };
 
 /// Ikon kendaraan tampak samping sesuai jenis (`VehicleModel.visual`).
@@ -56,7 +89,7 @@ class VehiclePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final s = _vehicleStyles[visual] ?? _vehicleStyles['pickup']!;
+    final s = _vehicleStyles[visual] ?? _vehicleStyles['box_car']!;
     canvas.save();
     canvas.scale(size.width / 64, size.height / 32);
     final outline = Paint()
@@ -73,60 +106,113 @@ class VehiclePainter extends CustomPainter {
         RRect.fromLTRBR(l, t, rr, b, Radius.circular(rad));
 
     // sasis
-    shape(Path()..addRRect(r(3, 21, 60, 25, 1)), const Color(0xFF2C3036));
+    shape(Path()..addRRect(r(2, 21, 61, 25, 1)), const Color(0xFF2C3036));
+
+    // kabin
+    final (cabLeft, cabTop, front) = switch (s.cab) {
+      _Cab.nosed => (37.0, 9.5, 61.0),
+      _Cab.semi => (43.0, 8.0, 60.0),
+      _Cab.flat => (s.body == _Body.tallBox ? 44.0 : 45.0, s.body == _Body.tallBox ? 5.0 : 4.0, 61.0),
+    };
 
     // bodi muatan
-    final cabLeft = switch (s.kind) { _Body.container => 45.0, _Body.tallBox => 41.0, _ => 42.0 };
-    switch (s.kind) {
+    final bodyRight = cabLeft - 1;
+    switch (s.body) {
       case _Body.openBed:
-        shape(Path()..addRRect(r(7, 15, 41, 22, 1)), s.body);
-        for (final (x, w, h) in [(10.0, 9.0, 6.0), (20.0, 8.0, 5.0), (29.0, 9.0, 7.0)]) {
+        shape(Path()..addRRect(r(5, 15, bodyRight - 1, 22, 1)), s.bodyColor);
+        for (final (x, w, h) in [(8.0, 8.0, 6.0), (17.0, 7.0, 4.5), (25.0, 8.0, 6.5)]) {
           shape(Path()..addRRect(r(x, 15 - h, x + w, 15, 0.8)), const Color(0xFFC79B63));
         }
       case _Body.box || _Body.tallBox:
-        final top = s.kind == _Body.tallBox ? 3.0 : 6.0;
-        final left = s.kind == _Body.tallBox ? 4.0 : 6.0;
-        shape(Path()..addRRect(r(left, top, cabLeft - 1, 22, 1.4)), s.body);
+        final top = s.body == _Body.tallBox ? 3.0 : 6.0;
+        shape(Path()..addRRect(r(4, top, bodyRight, 22, 1.4)), s.bodyColor);
         if (s.accent != null) {
-          canvas.drawRect(Rect.fromLTRB(left + 0.6, 14, cabLeft - 1.6, 16.5), Paint()..color = s.accent!);
+          canvas.drawRect(Rect.fromLTRB(4.6, 14, bodyRight - 0.6, 16.5), Paint()..color = s.accent!);
+        }
+      case _Body.woodBed:
+        shape(Path()..addRRect(r(2, 9, bodyRight, 22, 0.8)), s.bodyColor);
+        final plank = Paint()
+          ..color = const Color(0xFF7A5634)
+          ..strokeWidth = 0.9;
+        for (final y in [12.5, 16.0, 19.0]) {
+          canvas.drawLine(Offset(2.6, y), Offset(bodyRight - 0.6, y), plank);
+        }
+        for (final x in [2.0, bodyRight]) {
+          canvas.drawRect(Rect.fromLTRB(x - 0.8, 9, x + 0.8, 22), Paint()..color = const Color(0xFF39434D));
         }
       case _Body.container:
-        shape(Path()..addRRect(r(2, 20, cabLeft - 0.5, 22.5, 0.6)), const Color(0xFF8D939A));
-        shape(Path()..addRRect(r(3, 4, cabLeft - 3, 20, 0.8)), s.body);
+        shape(Path()..addRRect(r(2, 20, bodyRight + 0.5, 22.5, 0.6)), const Color(0xFF8D939A));
+        shape(Path()..addRRect(r(4, 4, bodyRight - 2.5, 20, 0.8)), s.bodyColor);
         final rib = Paint()
           ..color = const Color(0xFF1F5552)
           ..strokeWidth = 1.0;
-        for (var x = 6.0; x < cabLeft - 4; x += 3.3) {
+        for (var x = 7.0; x < bodyRight - 3; x += 3.3) {
           canvas.drawLine(Offset(x, 5.5), Offset(x, 18.5), rib);
         }
     }
 
-    // kabin dengan kaca depan miring
-    final cabTop = s.kind == _Body.container ? 6.0 : (s.kind == _Body.tallBox ? 7.0 : 9.0);
-    final front = cabLeft + 16.5;
-    final cab = Path()
-      ..moveTo(cabLeft, 22)
-      ..lineTo(cabLeft, cabTop + 1.5)
-      ..quadraticBezierTo(cabLeft, cabTop, cabLeft + 1.5, cabTop)
-      ..lineTo(front - 6, cabTop)
-      ..lineTo(front - 1.2, cabTop + 7)
-      ..lineTo(front, cabTop + 8)
-      ..lineTo(front, 22)
-      ..close();
-    shape(cab, s.cab);
-    final glass = Path()
-      ..moveTo(cabLeft + 6.5, cabTop + 1.8)
-      ..lineTo(front - 6.6, cabTop + 1.8)
-      ..lineTo(front - 2.8, cabTop + 7)
-      ..lineTo(cabLeft + 6.5, cabTop + 7)
-      ..close();
-    canvas.drawPath(glass, Paint()..color = _window);
-    canvas.drawRect(Rect.fromLTWH(front - 2.2, 17.5, 2.2, 2), Paint()..color = const Color(0xFFFFF3C4));
+    switch (s.cab) {
+      case _Cab.nosed:
+        // kabin + kap mesin pendek
+        final cab = Path()
+          ..moveTo(cabLeft, 22)
+          ..lineTo(cabLeft, cabTop + 1.5)
+          ..quadraticBezierTo(cabLeft, cabTop, cabLeft + 1.5, cabTop)
+          ..lineTo(cabLeft + 9, cabTop)
+          ..lineTo(cabLeft + 14, cabTop + 6.5)
+          ..lineTo(front - 0.8, cabTop + 7.5)
+          ..quadraticBezierTo(front, cabTop + 7.7, front, cabTop + 9)
+          ..lineTo(front, 22)
+          ..close();
+        shape(cab, s.cabColor);
+        canvas.drawPath(
+            Path()
+              ..moveTo(cabLeft + 5, cabTop + 1.8)
+              ..lineTo(cabLeft + 8.6, cabTop + 1.8)
+              ..lineTo(cabLeft + 12.6, cabTop + 6.3)
+              ..lineTo(cabLeft + 5, cabTop + 6.3)
+              ..close(),
+            Paint()..color = _window);
+      case _Cab.semi || _Cab.flat:
+        final slant = s.cab == _Cab.semi ? 5.0 : 1.4;
+        final cab = Path()
+          ..moveTo(cabLeft, 22)
+          ..lineTo(cabLeft, cabTop + 1.5)
+          ..quadraticBezierTo(cabLeft, cabTop, cabLeft + 1.5, cabTop)
+          ..lineTo(front - slant - 0.5, cabTop)
+          ..lineTo(front, cabTop + (s.cab == _Cab.semi ? 7.5 : 3))
+          ..lineTo(front, 22)
+          ..close();
+        shape(cab, s.cabColor);
+        canvas.drawPath(
+            Path()
+              ..moveTo(cabLeft + 5, cabTop + 1.8)
+              ..lineTo(front - slant - 0.4, cabTop + 1.8)
+              ..lineTo(front - (s.cab == _Cab.semi ? 1.8 : 0.9), cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
+              ..lineTo(cabLeft + 5, cabTop + (s.cab == _Cab.semi ? 6.8 : 8))
+              ..close(),
+            Paint()..color = _window);
+        if (s.cab == _Cab.flat) {
+          canvas.drawRect(Rect.fromLTRB(front - 5.5, 15.5, front - 0.6, 17), Paint()..color = const Color(0xFF39434D));
+        }
+    }
+    canvas.drawRect(Rect.fromLTWH(front - 2.2, 18.2, 2.2, 1.8), Paint()..color = const Color(0xFFFFF3C4));
 
     // roda
-    for (final x in s.axles) {
-      canvas.drawCircle(Offset(x, 25), 4.4, Paint()..color = _tire);
+    for (final (i, x) in s.axles.indexed) {
+      final rear = i == 0 && s.dualRear;
+      canvas.drawCircle(Offset(x, 25), rear ? 4.8 : 4.4, Paint()..color = _tire);
       canvas.drawCircle(Offset(x, 25), 1.9, Paint()..color = _hub);
+      if (rear) {
+        canvas.drawCircle(
+          Offset(x, 25),
+          3.3,
+          Paint()
+            ..color = _hub.withValues(alpha: 0.5)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.6,
+        );
+      }
     }
     canvas.restore();
   }
@@ -405,7 +491,7 @@ class AppLogoPainter extends CustomPainter {
     canvas.save();
     canvas.translate(10, 46);
     canvas.rotate(-0.22);
-    const VehiclePainter('pickup').paint(canvas, const Size(54, 27));
+    const VehiclePainter('box_car').paint(canvas, const Size(54, 27));
     canvas.restore();
     canvas.restore();
   }

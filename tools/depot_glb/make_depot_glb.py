@@ -6,7 +6,7 @@ Menghasilkan:
   palang gerbang, penanda konstruksi; depot.glb = pratinjau depot awal (lahan 40×30 m, 3 slot parkir, gerbang + pos jaga,
                        loading area, gudang beratap pelana, kantor) beserta lingkungan:
                        jalan umum bermarka, trotoar, pohon, lampu, rumah tetangga
-  pickup.glb         — pikap box (menghadap +X)
+  kendaraan (+ varian _open), palet muatan, pekerja (+ memanggul kardus), props
   worker.glb         — pekerja berompi
   depot_layout.json  — titik penting depot untuk animasi kendaraan di app
 
@@ -102,6 +102,21 @@ MATERIALS = {
     "container":  (srgb("#2e7d7a"), 0.4, 0.5),
     "container_rib": (srgb("#256663"), 0.4, 0.55),
     "lock":       (srgb("#c9ced3"), 0.8, 0.3),
+    "silver":     (srgb("#b7bec6"), 0.6, 0.3),
+    "alu":        (srgb("#e9ecef"), 0.5, 0.35),
+    "cargo_floor": (srgb("#5a5047"), 0.0, 0.9),
+    "cab_yellow": (srgb("#e8a623"), 0.3, 0.35),
+    "wood_dark":  (srgb("#7a5634"), 0.0, 0.85),
+    "carton_light": (srgb("#d9b37c"), 0.0, 0.9),
+    "tape":       (srgb("#e6d6a8"), 0.0, 0.6),
+    "galon":      (srgb("#6fb7e8"), 0.1, 0.15),
+    "car_teal":   (srgb("#2e8b9a"), 0.5, 0.3),
+    "container_red": (srgb("#a4452c"), 0.4, 0.55),
+    "container_red_rib": (srgb("#86361f"), 0.4, 0.6),
+    "tank":       (srgb("#4f7fa8"), 0.5, 0.4),
+    "genset":     (srgb("#3f8f5a"), 0.4, 0.5),
+    "bin_green":  (srgb("#3b9b4f"), 0.1, 0.6),
+    "bin_orange": (srgb("#e47b25"), 0.1, 0.6),
 }
 
 # Kubus satuan, dipakai juga oleh test winding.
@@ -318,7 +333,7 @@ LAYOUT = {
     # Titik penanda konstruksi per fasilitas (di luar jalur kendaraan).
     "anchors": {
         "parking": (-9.0, -10.5),
-        "gate": (8.5, 11.0),
+        "gate": (9.5, 17.3),
         "loading_dock": (17.0, 1.0),
         "warehouse": (1.5, -11.0),
         "office": (-14.0, 17.5),
@@ -601,45 +616,21 @@ def build_construction() -> MeshBuilder:
 
 # ---------------------------------------------------------------- kendaraan & pekerja
 # Semua kendaraan menghadap +X. Bak paling belakang ≤ 2.7 m dari origin agar
-# berhenti tepat di depan platform dock (DOCK_Z).
+# berhenti tepat di depan platform dock (DOCK_Z). Tiap kendaraan box punya
+# varian "_open" (pintu belakang terbuka, terlipat ke samping) untuk animasi
+# muat, dan daftar titik muatan (palet) di lantai bak.
 
-def _cab(m: MeshBuilder, body: str, x0: float, x1: float, height: float, width: float, base_y: float = 1.3):
-    """Kabin dengan kaca depan miring, dari x0 (belakang) ke x1 (depan)."""
-    hw = width / 2
-    y0, y1 = base_y, base_y + height
-    slope = 0.3
-    m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, y0 - 0.55, width), y0=0.55)
-    m.solid(body, [
-        [(x0, y0, -hw), (x1, y0, -hw), (x1 - slope, y1, -hw + 0.04), (x0, y1, -hw + 0.04)],
-        [(x0, y0, hw), (x1, y0, hw), (x1 - slope, y1, hw - 0.04), (x0, y1, hw - 0.04)],
-        [(x0, y0, -hw), (x0, y0, hw), (x0, y1, hw - 0.04), (x0, y1, -hw + 0.04)],
-        [(x1, y0, -hw), (x1, y0, hw), (x1 - slope, y1, hw - 0.04), (x1 - slope, y1, -hw + 0.04)],
-        [(x0, y1, -hw + 0.04), (x1 - slope, y1, -hw + 0.04), (x1 - slope, y1, hw - 0.04), (x0, y1, hw - 0.04)],
-        [(x0, y0, -hw), (x1, y0, -hw), (x1, y0, hw), (x0, y0, hw)],
-    ])
-    m.solid("window", [
-        [(x1 + 0.01, y0 + 0.06, -hw + 0.12), (x1 - slope + 0.03, y1 - 0.04, -hw + 0.14),
-         (x1 - slope + 0.03, y1 - 0.04, hw - 0.14), (x1 + 0.01, y0 + 0.06, hw - 0.12)],
-        [(x1 - 0.02, y0 + 0.06, -hw + 0.12), (x1 - slope, y1 - 0.04, -hw + 0.14),
-         (x1 - slope, y1 - 0.04, hw - 0.14), (x1 - 0.02, y0 + 0.06, hw - 0.12)],
-        [(x1 - 0.02, y0 + 0.06, -hw + 0.12), (x1 + 0.01, y0 + 0.06, -hw + 0.12),
-         (x1 - slope + 0.03, y1 - 0.04, -hw + 0.14), (x1 - slope, y1 - 0.04, -hw + 0.14)],
-        [(x1 - 0.02, y0 + 0.06, hw - 0.12), (x1 + 0.01, y0 + 0.06, hw - 0.12),
-         (x1 - slope + 0.03, y1 - 0.04, hw - 0.14), (x1 - slope, y1 - 0.04, hw - 0.14)],
-    ])
-    for side in (-1, 1):
-        m.box("window", ((x0 + x1) / 2 - 0.1, y0 + height * 0.5, side * hw), (x1 - x0 - 0.6, height * 0.6, 0.03))
-        m.box("frame", (x1 - 0.05, y0 + 0.25, side * (hw + 0.1)), (0.1, 0.12, 0.18))
-    m.box("chassis", (x1 + 0.06, 0.62, 0), (0.12, 0.3, width + 0.02))
-    for side in (-1, 1):
-        m.box("headlight", (x1 + 0.03, y0 - 0.32, side * (hw - 0.25)), (0.05, 0.18, 0.32))
+CRATE = 0.74          # sisi palet muatan
 
 
-def _wheels(m: MeshBuilder, xs, half_track: float, radius: float = 0.36):
+def _wheels(m: MeshBuilder, xs, half_track: float, radius: float = 0.36, dual: bool = False):
     for x in xs:
         for z in (-half_track, half_track):
-            m.cylinder("tire", (x, radius, z), radius, 0.26, axis="z", sides=10)
-            m.cylinder("hub", (x, radius, z + (0.135 if z > 0 else -0.135)), radius * 0.47, 0.02, axis="z", sides=8)
+            zs = [z, z - 0.27 if z > 0 else z + 0.27] if dual else [z]
+            for zz in zs:
+                m.cylinder("tire", (x, radius, zz), radius, 0.26, axis="z", sides=10)
+            outer = z + (0.135 if z > 0 else -0.135)
+            m.cylinder("hub", (x, radius, outer), radius * 0.47, 0.02, axis="z", sides=8)
 
 
 def _taillights(m: MeshBuilder, x, half):
@@ -647,79 +638,214 @@ def _taillights(m: MeshBuilder, x, half):
         m.box("taillight", (x, 0.85, side * half), (0.04, 0.22, 0.2))
 
 
-def build_pickup_open() -> MeshBuilder:
-    """Pikap losbak (bak terbuka, muatan karton terlihat). ±4.6 m."""
-    m = MeshBuilder()
-    m.box_on_ground("chassis", 0.0, 0, (4.4, 0.3, 1.5), y0=0.32)
-    _cab(m, "body_white", 1.0, 2.1, 0.7, 1.72)
-    m.box_on_ground("bed", -0.6, 0, (2.9, 0.12, 1.8), y0=0.62)
+def _headlights(m: MeshBuilder, x, y, half):
     for side in (-1, 1):
-        m.box_on_ground("bed", -0.6, side * 0.86, (2.9, 0.45, 0.08), y0=0.74)
-    m.box_on_ground("bed", -2.02, 0, (0.08, 0.45, 1.8), y0=0.74)
-    m.box_on_ground("bed", 0.82, 0, (0.08, 0.6, 1.8), y0=0.74)
-    for dx, dz, h in ((-1.3, -0.35, 0.5), (-1.3, 0.4, 0.4), (-0.4, 0.0, 0.55)):
-        m.box_on_ground("carton", dx, dz, (0.7, h, 0.7), y0=0.74)
-    m.box("chassis", (-2.12, 0.55, 0), (0.12, 0.24, 1.7))
-    _taillights(m, -2.08, 0.7)
-    _wheels(m, (1.55, -1.1), 0.78)
-    return m
+        m.box("headlight", (x, y, side * half), (0.05, 0.18, 0.3))
 
 
-def build_pickup() -> MeshBuilder:
-    """Pikap box (kotak tertutup putih + pita oranye). ±4.7 m."""
+def _windshield(m: MeshBuilder, x_bottom, x_top, y0, y1, hw):
+    """Kaca depan tipis (lempeng miring), dua sisi agar tidak ter-cull."""
+    m.solid("window", [
+        [(x_bottom + 0.012, y0, -hw), (x_top + 0.012, y1, -hw), (x_top + 0.012, y1, hw), (x_bottom + 0.012, y0, hw)],
+        [(x_bottom - 0.02, y0, -hw), (x_top - 0.02, y1, -hw), (x_top - 0.02, y1, hw), (x_bottom - 0.02, y0, hw)],
+        [(x_bottom - 0.02, y0, -hw), (x_bottom + 0.012, y0, -hw), (x_top + 0.012, y1, -hw), (x_top - 0.02, y1, -hw)],
+        [(x_bottom - 0.02, y0, hw), (x_bottom + 0.012, y0, hw), (x_top + 0.012, y1, hw), (x_top - 0.02, y1, hw)],
+    ])
+
+
+def _cab_over(m: MeshBuilder, body: str, x0, x1, base_y, height, width, slope=0.12):
+    """Kabin datar (cab-over): muka hampir tegak, khas truk Indonesia."""
+    hw = width / 2
+    y_top = base_y + height
+    m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, base_y - 0.45, width), y0=0.45)
+    m.solid(body, [
+        [(x0, base_y, -hw), (x1, base_y, -hw), (x1 - slope, y_top, -hw), (x0, y_top, -hw)],
+        [(x0, base_y, hw), (x1, base_y, hw), (x1 - slope, y_top, hw), (x0, y_top, hw)],
+        [(x0, base_y, -hw), (x0, base_y, hw), (x0, y_top, hw), (x0, y_top, -hw)],
+        [(x1, base_y, -hw), (x1, base_y, hw), (x1 - slope, y_top, hw), (x1 - slope, y_top, -hw)],
+        [(x0, y_top, -hw), (x1 - slope, y_top, -hw), (x1 - slope, y_top, hw), (x0, y_top, hw)],
+        [(x0, base_y, -hw), (x1, base_y, -hw), (x1, base_y, hw), (x0, base_y, hw)],
+    ])
+    _windshield(m, x1 + 0.005, x1 - slope + 0.005, base_y + 0.12, y_top - 0.12, hw - 0.12)
+    for side in (-1, 1):
+        m.box("window", (x1 - 0.45, base_y + height * 0.55, side * hw), (0.55, height * 0.45, 0.03))
+        m.box("frame", (x1 - 0.1, base_y + 0.2, side * (hw + 0.12)), (0.08, 0.35, 0.06))   # spion
+    m.box("frame", (x1 + 0.03, base_y - 0.35, 0), (0.06, 0.3, width * 0.7))                  # gril
+    m.box("chassis", (x1 + 0.06, 0.62, 0), (0.12, 0.3, width + 0.02))                       # bumper
+    _headlights(m, x1 + 0.04, base_y - 0.3, hw - 0.28)
+
+
+def _nosed_cab(m: MeshBuilder, body: str, x0, x1, hood, width):
+    """Kabin dengan moncong pendek (pikap)."""
+    hw = width / 2
+    base_y, y_top = 1.2, 1.95
+    m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, base_y - 0.5, width), y0=0.5)
+    m.box_on_ground(body, x1 + hood / 2, 0, (hood, 0.62, width - 0.04), y0=0.5)       # kap mesin
+    slope = 0.38
+    m.solid(body, [
+        [(x0, base_y, -hw), (x1, base_y, -hw), (x1 - slope, y_top, -hw + 0.04), (x0, y_top, -hw + 0.04)],
+        [(x0, base_y, hw), (x1, base_y, hw), (x1 - slope, y_top, hw - 0.04), (x0, y_top, hw - 0.04)],
+        [(x0, base_y, -hw), (x0, base_y, hw), (x0, y_top, hw - 0.04), (x0, y_top, -hw + 0.04)],
+        [(x1, base_y, -hw), (x1, base_y, hw), (x1 - slope, y_top, hw - 0.04), (x1 - slope, y_top, -hw + 0.04)],
+        [(x0, y_top, -hw + 0.04), (x1 - slope, y_top, -hw + 0.04), (x1 - slope, y_top, hw - 0.04), (x0, y_top, hw - 0.04)],
+        [(x0, base_y, -hw), (x1, base_y, -hw), (x1, base_y, hw), (x0, base_y, hw)],
+    ])
+    _windshield(m, x1 + 0.005, x1 - slope + 0.005, base_y + 0.06, y_top - 0.05, hw - 0.14)
+    for side in (-1, 1):
+        m.box("window", ((x0 + x1) / 2 - 0.12, base_y + 0.4, side * hw), (x1 - x0 - 0.55, 0.42, 0.03))
+        m.box("frame", (x1 - 0.05, base_y + 0.22, side * (hw + 0.1)), (0.1, 0.12, 0.18))
+    front = x1 + hood
+    m.box("frame", (front + 0.02, 0.85, 0), (0.05, 0.22, width * 0.6))                       # gril
+    m.box("chassis", (front + 0.06, 0.6, 0), (0.12, 0.26, width + 0.02))
+    _headlights(m, front + 0.03, 0.9, hw - 0.22)
+
+
+def _cargo_box(m: MeshBuilder, x0, x1, y0, height, width, body: str, opened: bool, stripe: str | None):
+    """Box muatan. Tertutup: satu solid. Terbuka: dinding terpisah (interior
+    terlihat) dan pintu belakang terlipat ke samping."""
+    hw = width / 2
+    t = 0.05
+    if not opened:
+        m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, height, width), y0=y0)
+        m.box("frame", (x0 - 0.01, y0 + height / 2, 0), (0.02, height - 0.1, 0.03))         # garis pintu
+        for dz in (-0.25, 0.25):
+            m.box("lock", (x0 - 0.02, y0 + height / 2, dz), (0.03, height * 0.7, 0.04))
+    else:
+        m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, t, width), y0=y0)                 # lantai
+        m.box_on_ground(body, (x0 + x1) / 2, 0, (x1 - x0, t, width), y0=y0 + height - t)    # atap
+        for side in (-1, 1):
+            m.box_on_ground(body, (x0 + x1) / 2, side * (hw - t / 2), (x1 - x0, height, t), y0=y0)
+            # pintu terlipat menempel sisi luar
+            m.box_on_ground(body, x0 + hw / 2 + 0.02, side * (hw + 0.04), (hw - 0.02, height - 0.08, 0.04), y0=y0 + 0.04)
+        m.box_on_ground(body, x1 - t / 2, 0, (t, height, width), y0=y0)                     # dinding depan
+        m.box_on_ground("cargo_floor", (x0 + x1) / 2, 0, (x1 - x0 - 0.12, 0.02, width - 0.12), y0=y0 + t)
+    if stripe:
+        for side in (-1, 1):
+            m.box(stripe, ((x0 + x1) / 2, y0 + height * 0.42, side * (hw + 0.012)), (x1 - x0, 0.22, 0.02))
+
+
+def _slots(x_back, x_front, floor_y, width, rows: int = 2):
+    """Titik palet di lantai bak, terurut dari depan (dekat kabin) ke belakang."""
+    n = int((x_front - x_back) // (CRATE + 0.04))
+    xs = [x_front - (CRATE / 2 + 0.03) - i * (CRATE + 0.04) for i in range(n)]
+    zs = [(-1 + 2 * (j + 0.5) / rows) * (width / 2 - CRATE / 2 - 0.04) * (1 if rows > 1 else 0) for j in range(rows)]
+    return [[round(x, 3), round(floor_y, 3), round(z, 3)] for x in xs for z in zs]
+
+
+def build_pickup_open(opened: bool = False):
+    """Pikap: kabin bermoncong pendek, bak terbuka bersisi rendah."""
+    m = MeshBuilder()
+    m.box_on_ground("chassis", 0.05, 0, (4.3, 0.3, 1.45), y0=0.3)
+    _nosed_cab(m, "body_white", 0.55, 1.55, 0.65, 1.7)
+    m.box_on_ground("bed", -0.82, 0, (2.6, 0.1, 1.76), y0=0.6)
+    for side in (-1, 1):
+        m.box_on_ground("bed", -0.82, side * 0.86, (2.6, 0.42, 0.06), y0=0.7)
+    m.box_on_ground("bed", -2.1, 0, (0.06, 0.42, 1.76), y0=0.7)
+    m.box_on_ground("bed", 0.47, 0, (0.06, 0.55, 1.76), y0=0.7)
+    m.box("chassis", (-2.2, 0.55, 0), (0.1, 0.22, 1.6))
+    _taillights(m, -2.16, 0.68)
+    _wheels(m, (1.55, -1.15), 0.78)
+    return m, _slots(-2.04, 0.42, 0.7, 1.64)
+
+
+def build_box_car(opened: bool = False):
+    """Mobil box: kabin semi cab-over perak, box aluminium putih."""
     m = MeshBuilder()
     m.box_on_ground("chassis", 0.0, 0, (4.5, 0.3, 1.5), y0=0.32)
-    _cab(m, "body_white", 1.0, 2.1, 0.7, 1.72)
-    m.box_on_ground("box_body", -0.6, 0, (2.95, 1.75, 1.82), y0=0.62)
-    for side in (-1, 1):
-        m.box("stripe", (-0.6, 1.15, side * 0.915), (2.95, 0.22, 0.02))
-    m.box("stripe", (-2.08, 1.15, 0), (0.02, 0.22, 1.82))
-    m.box("chassis", (-2.16, 0.55, 0), (0.12, 0.24, 1.7))
-    _taillights(m, -2.11, 0.7)
+    _cab_over(m, "silver", 1.15, 2.2, 1.3, 0.72, 1.72, slope=0.32)
+    _cargo_box(m, -2.15, 1.05, 0.62, 1.9, 1.84, "alu", opened, "stripe")
+    m.box("chassis", (-2.22, 0.55, 0), (0.1, 0.24, 1.7))
+    _taillights(m, -2.18, 0.72)
     _wheels(m, (1.6, -1.1), 0.78)
-    return m
+    return m, _slots(-2.05, 0.95, 0.67, 1.74)
 
 
-def build_mini_truck() -> MeshBuilder:
-    """Mini truck box (kabin biru di depan, box lebih tinggi). ±5.3 m."""
+def build_mini_truck(opened: bool = False):
+    """Truk mini: kabin cab-over biru tegak, box tinggi bergaris biru."""
     m = MeshBuilder()
-    m.box_on_ground("chassis", 0.2, 0, (5.0, 0.32, 1.6), y0=0.36)
-    _cab(m, "cab_blue", 1.6, 2.65, 0.85, 1.85, base_y=1.35)
-    m.box_on_ground("box_body", -0.5, 0, (3.9, 2.15, 1.98), y0=0.68)
+    m.box_on_ground("chassis", 0.15, 0, (5.0, 0.32, 1.6), y0=0.36)
+    _cab_over(m, "cab_blue", 1.65, 2.72, 1.42, 0.92, 1.88)
+    _cargo_box(m, -2.55, 1.55, 0.68, 2.2, 1.98, "box_body", opened, "cab_blue")
+    m.box("chassis", (-2.6, 0.6, 0), (0.1, 0.24, 1.8))
+    _taillights(m, -2.57, 0.78)
+    _wheels(m, (2.0, -1.4), 0.82, 0.4)
+    return m, _slots(-2.45, 1.45, 0.73, 1.88)
+
+
+def build_engkel_truck(opened: bool = False):
+    """Truk engkel: kabin cab-over kuning besar, bak kayu tinggi, roda belakang ganda."""
+    m = MeshBuilder()
+    m.box_on_ground("chassis", 0.5, 0, (6.2, 0.36, 1.7), y0=0.44)
+    _cab_over(m, "cab_yellow", 2.45, 3.68, 1.55, 1.1, 2.06)
+    m.box_on_ground("wood_dark", -0.2, 0, (4.9, 0.12, 2.1), y0=0.86)                         # lantai bak
     for side in (-1, 1):
-        m.box("stripe", (-0.5, 1.3, side * 0.995), (3.9, 0.28, 0.02))
-        m.box("cab_blue", (-0.5, 0.82, side * 0.995), (3.9, 0.1, 0.02))
-    m.box("chassis", (-2.55, 0.6, 0), (0.12, 0.24, 1.8))
-    _taillights(m, -2.52, 0.75)
-    _wheels(m, (2.0, -1.3), 0.82, 0.4)
-    return m
+        m.box_on_ground("wood", -0.2, side * 1.02, (4.9, 0.95, 0.07), y0=0.98)
+        for y in (1.3, 1.62):
+            m.box("wood_dark", (-0.2, y, side * 1.06), (4.9, 0.05, 0.02))
+    m.box_on_ground("wood", -2.62, 0, (0.07, 0.95, 2.1), y0=0.98)                            # pintu belakang
+    m.box_on_ground("wood", 2.22, 0, (0.07, 1.3, 2.1), y0=0.98)                              # dinding depan
+    for x in (-2.62, 2.22):
+        for side in (-1, 1):
+            m.box_on_ground("frame", x, side * 1.04, (0.1, 1.0, 0.1), y0=0.96)
+    m.box("chassis", (-2.66, 0.66, 0), (0.08, 0.26, 2.0))
+    _taillights(m, -2.64, 0.86)
+    _wheels(m, (3.0,), 0.86, 0.42)
+    _wheels(m, (-1.45,), 0.92, 0.42, dual=True)
+    return m, _slots(-2.52, 2.12, 0.92, 1.98)
 
 
-def build_container_truck() -> MeshBuilder:
-    """Truk engkel pembawa kontainer 10 ft (kabin merah, kontainer hijau toska
-    bergelombang, roda belakang ganda). ±6.2 m."""
+def build_container_truck(opened: bool = False):
+    """Truk engkel kontainer 10 ft: kabin cab-over merah, kontainer toska bergelombang."""
     m = MeshBuilder()
-    m.box_on_ground("chassis", 0.75, 0, (6.0, 0.36, 1.7), y0=0.42)
-    _cab(m, "cab_red", 2.2, 3.45, 1.0, 2.0, base_y=1.45)
-    m.box_on_ground("bed", -0.35, 0, (4.4, 0.16, 2.1), y0=0.78)   # dek datar
-    cx, cl, ch, cw = -0.45, 3.4, 2.3, 2.1                          # kontainer 10 ft
-    m.box_on_ground("container", cx, 0, (cl, ch, cw), y0=0.94)
-    for i in range(9):                                             # gelombang dinding
+    m.box_on_ground("chassis", 0.5, 0, (6.2, 0.36, 1.7), y0=0.44)
+    _cab_over(m, "cab_red", 2.45, 3.68, 1.55, 1.1, 2.06)
+    m.box_on_ground("bed", -0.2, 0, (4.9, 0.14, 2.1), y0=0.8)
+    cx, cl, ch, cw = -0.35, 3.6, 2.3, 2.1
+    if not opened:
+        m.box_on_ground("container", cx, 0, (cl, ch, cw), y0=0.94)
+        for dz in (-0.55, -0.2, 0.2, 0.55):
+            m.box("lock", (cx - cl / 2 - 0.03, 0.94 + ch / 2, dz), (0.04, ch - 0.3, 0.05))
+    else:
+        _cargo_box(m, cx - cl / 2, cx + cl / 2, 0.94, ch, cw, "container", True, None)
+    for i in range(9):
         x = cx - cl / 2 + 0.2 + i * (cl - 0.4) / 8
         for side in (-1, 1):
             m.box("container_rib", (x, 0.94 + ch / 2, side * (cw / 2 + 0.015)), (0.12, ch - 0.2, 0.03))
-    m.box("container_rib", (cx, 0.94 + ch - 0.06, 0), (cl + 0.02, 0.12, cw + 0.02))  # rangka atas
-    m.box("container_rib", (cx - cl / 2 - 0.02, 0.94 + ch / 2, 0), (0.04, ch, cw))   # pintu belakang
-    for dz in (-0.55, -0.2, 0.2, 0.55):
-        m.box("lock", (cx - cl / 2 - 0.05, 0.94 + ch / 2, dz), (0.04, ch - 0.3, 0.05))
+    m.box("container_rib", (cx, 0.94 + ch - 0.06, 0), (cl + 0.02, 0.12, cw + 0.02))
     m.box("chassis", (-2.6, 0.62, 0), (0.12, 0.26, 2.0))
     _taillights(m, -2.57, 0.85)
-    _wheels(m, (2.75,), 0.88, 0.42)
-    _wheels(m, (-1.1, -1.75), 0.92, 0.42)
+    _wheels(m, (3.0,), 0.86, 0.42)
+    _wheels(m, (-1.45,), 0.92, 0.42, dual=True)
+    return m, _slots(cx - cl / 2 + 0.1, cx + cl / 2 - 0.1, 0.99, cw - 0.1)
+
+
+VEHICLE_BUILDERS = {
+    "pickup_open": build_pickup_open,
+    "box_car": build_box_car,
+    "mini_truck": build_mini_truck,
+    "engkel_truck": build_engkel_truck,
+    "container_truck": build_container_truck,
+}
+# Kendaraan dengan pintu belakang (punya varian _open saat dimuat).
+VEHICLES_WITH_DOORS = ("box_car", "mini_truck", "container_truck")
+
+
+def build_cargo_crate() -> MeshBuilder:
+    """Satu palet muatan: palet kayu + kardus bertumpuk (origin di lantai)."""
+    m = MeshBuilder()
+    m.box_on_ground("wood", 0, 0, (CRATE, 0.1, CRATE))
+    s = CRATE / 2 - 0.02
+    for dx in (-s / 2, s / 2):
+        for dz in (-s / 2, s / 2):
+            m.box_on_ground("carton", dx, dz, (s - 0.02, 0.26, s - 0.02), y0=0.1)
+    for dz in (-s / 2, s / 2):
+        m.box_on_ground("carton_light", -s / 2 + 0.05, dz, (s - 0.02, 0.24, s - 0.02), y0=0.36)
+    m.box("tape", (0, 0.36, 0), (CRATE - 0.06, 0.005, 0.06))
     return m
 
 
-def build_worker() -> MeshBuilder:
+def build_worker(carry: bool = False) -> MeshBuilder:
+    """Pekerja berompi, menghadap +X. carry=True: memanggul kardus di depan dada."""
     m = MeshBuilder()
     for dz in (-0.1, 0.1):
         m.box_on_ground("boots", 0.03, dz, (0.26, 0.1, 0.14))
@@ -727,12 +853,113 @@ def build_worker() -> MeshBuilder:
     m.box_on_ground("shirt", 0, 0, (0.26, 0.6, 0.44), y0=0.86)
     m.box_on_ground("vest", 0, 0, (0.28, 0.5, 0.46), y0=0.92)
     m.box("reflect", (0, 1.15, 0), (0.29, 0.06, 0.47))
-    for dz in (-0.29, 0.29):
-        m.box_on_ground("shirt", 0, dz, (0.13, 0.55, 0.12), y0=0.9)
-        m.box_on_ground("skin", 0, dz, (0.12, 0.12, 0.11), y0=0.8)
+    if carry:
+        for dz in (-0.25, 0.25):
+            m.box("shirt", (0.2, 1.25, dz), (0.36, 0.11, 0.11))        # lengan ke depan
+            m.box("skin", (0.4, 1.25, dz * 0.9), (0.08, 0.11, 0.1))
+        m.box_on_ground("carton", 0.38, 0, (0.36, 0.32, 0.42), y0=1.12)
+        m.box("tape", (0.38, 1.441, 0), (0.37, 0.004, 0.06))
+    else:
+        for dz in (-0.29, 0.29):
+            m.box_on_ground("shirt", 0, dz, (0.13, 0.55, 0.12), y0=0.9)
+            m.box_on_ground("skin", 0, dz, (0.12, 0.12, 0.11), y0=0.8)
     m.box_on_ground("skin", 0, 0, (0.22, 0.24, 0.22), y0=1.48)
     m.cone("helmet", 0, 0, 1.68, 0.17, 0.14, sides=8, top_radius=0.11)
     m.box("helmet", (0.1, 1.69, 0), (0.12, 0.03, 0.3))
+    return m
+
+
+def build_forklift(m: MeshBuilder, x, z, facing: int = -1):
+    """Forklift kuning (diletakkan langsung di modul props)."""
+    f = facing
+    m.box_on_ground("cab_yellow", x, z, (1.6, 0.9, 1.05), y0=0.25)
+    m.box_on_ground("chassis", x - f * 0.55, z, (0.5, 0.75, 1.0), y0=0.3)                  # pemberat
+    m.box_on_ground("rubber", x - f * 0.1, z, (0.45, 0.12, 0.5), y0=1.15)                   # kursi
+    for dz in (-0.45, 0.45):
+        m.box_on_ground("chassis", x - f * 0.35, z + dz, (0.06, 1.3, 0.06), y0=1.15)        # rangka atap
+        m.box_on_ground("pole", x + f * 0.82, z + dz * 0.6, (0.08, 2.4, 0.08))              # tiang
+    m.box("chassis", (x - f * 0.05, 2.47, z), (0.85, 0.06, 1.0))
+    for dz in (-0.25, 0.25):
+        m.box_on_ground("pole", x + f * 1.35, z + dz, (1.0, 0.05, 0.1), y0=0.08)             # garpu
+    for wx in (x + f * 0.5, x - f * 0.5):
+        for dz in (-0.48, 0.48):
+            m.cylinder("tire", (wx, 0.25, z + dz), 0.25, 0.2, axis="z", sides=8)
+    m.block(x - 1.9, z - 0.6, x + 1.9, z + 0.6)
+
+
+def build_props() -> MeshBuilder:
+    """Dekorasi & properti depot (tetap, tidak ikut upgrade), di luar jalur kendaraan."""
+    m = MeshBuilder()
+    # --- area istirahat (gazebo) di timur laut
+    gx, gz = 12.0, 12.0
+    for dx in (-1.8, 1.8):
+        for dz in (-1.6, 1.6):
+            m.box_on_ground("wood_dark", gx + dx, gz + dz, (0.14, 2.5, 0.14))
+    m.gable_roof("tile", gx, gz, 4.6, 4.2, 2.5, 1.0)
+    m.box_on_ground("wood", gx, gz, (1.8, 0.08, 0.9), y0=0.72)                                # meja
+    m.box_on_ground("wood_dark", gx, gz, (0.12, 0.72, 0.12))
+    for dz in (-0.85, 0.85):
+        m.box_on_ground("wood", gx, gz + dz, (1.8, 0.07, 0.32), y0=0.42)                      # bangku
+        m.box_on_ground("wood_dark", gx, gz + dz, (1.6, 0.42, 0.08))
+    m.box_on_ground("galon", gx + 1.4, gz - 1.2, (0.3, 0.45, 0.3), y0=0.0)                   # galon minum
+    m.block(gx - 2.3, gz - 2.1, gx + 2.3, gz + 2.1)
+    # --- parkir motor karyawan
+    for i, color in enumerate(("cab_red", "cab_blue", "chassis", "cab_red")):
+        bx, bz = 15.6 + i * 1.0, 10.7
+        m.box_on_ground(color, bx, bz, (0.32, 0.45, 1.3), y0=0.35)
+        m.box_on_ground("rubber", bx, bz - 0.15, (0.28, 0.1, 0.6), y0=0.8)
+        for dz in (-0.62, 0.62):
+            m.cylinder("tire", (bx, 0.3, bz + dz), 0.3, 0.1, axis="x", sides=8)
+        m.box("pole", (bx, 1.05, bz + 0.6), (0.6, 0.05, 0.05))
+        m.block(bx - 0.35, bz - 0.95, bx + 0.35, bz + 0.95)
+    m.box("marking", (17.1, 0.05, 10.7), (4.2, 0.01, 0.08))
+    # --- mobil staf (hatchback)
+    cx, cz = 17.0, 13.4
+    m.box_on_ground("car_teal", cx, cz, (3.6, 0.65, 1.62), y0=0.3)
+    m.box_on_ground("car_teal", cx - 0.25, cz, (2.1, 0.55, 1.5), y0=0.95)
+    m.box_on_ground("window", cx - 0.25, cz, (2.12, 0.36, 1.52), y0=1.05)
+    for wx in (cx + 1.15, cx - 1.15):
+        for dz in (-0.78, 0.78):
+            m.cylinder("tire", (wx, 0.3, cz + dz), 0.3, 0.18, axis="z", sides=8)
+    m.block(cx - 1.85, cz - 0.9, cx + 1.85, cz + 0.9)
+    # --- sisi barat daya: kontainer bekas, menara air, genset, tumpukan ban
+    kx, kz = -16.5, -13.2
+    m.box_on_ground("container_red", kx, kz, (6.0, 2.6, 2.4))
+    for i in range(15):
+        x = kx - 2.8 + i * 0.4
+        for side in (-1, 1):
+            m.box("container_red_rib", (x, 1.3, kz + side * 1.215), (0.1, 2.4, 0.03))
+    m.block(kx - 3.05, kz - 1.25, kx + 3.05, kz + 1.25)
+    tx, tz = -14.4, -10.3
+    for dx in (-0.6, 0.6):
+        for dz in (-0.6, 0.6):
+            m.box_on_ground("pole", tx + dx, tz + dz, (0.1, 3.2, 0.1))
+    m.cylinder("tank", (tx, 3.9, tz), 0.85, 1.4, sides=10)
+    m.cone("roof_dark", tx, tz, 4.6, 0.9, 0.4, sides=10)
+    m.block(tx - 0.9, tz - 0.9, tx + 0.9, tz + 0.9)
+    m.box_on_ground("genset", -18.6, -10.3, (1.6, 1.2, 1.0))
+    for i in range(4):
+        m.box("pole", (-18.6 - 0.5 + i * 0.33, 0.8, -10.3 - 0.51), (0.18, 0.5, 0.02))
+    m.block(-19.45, -10.85, -17.75, -9.75)
+    for i in range(3):
+        m.cylinder("tire", (-16.8, 0.15 + i * 0.3, -10.1), 0.45, 0.28, sides=10)
+    m.block(-17.3, -10.6, -16.3, -9.6)
+    # --- tong sampah di samping kantor
+    for i, color in enumerate(("bin_green", "bin_orange")):
+        m.cylinder(color, (-19.25, 0.45, 10.4 + i * 0.75), 0.3, 0.9, sides=8)
+    m.block(-19.6, 10.05, -18.9, 11.5)
+    # --- forklift parkir di sisi timur dock
+    build_forklift(m, 18.55, 1.2, facing=-1)
+    # --- papan nama perusahaan & pot bunga di luar pagar utara
+    for x in (-8.9, -6.1):
+        m.box_on_ground("pole", x, 17.4, (0.12, 2.2, 0.12))
+    m.box_on_ground("frame", -7.5, 17.4, (3.4, 1.1, 0.12), y0=1.3)
+    m.box_on_ground("accent", -7.5, 17.33, (3.2, 0.35, 0.02), y0=1.65)
+    m.block(-9.0, 17.3, -6.0, 17.5)
+    for x in (14.5, 16.5, 18.5):
+        m.box_on_ground("concrete", x, 15.9, (1.2, 0.45, 0.6))
+        m.cone("leaf_light", x, 15.9, 0.45, 0.5, 0.55, sides=6, top_radius=0.2)
+        m.block(x - 0.6, 15.6, x + 0.6, 16.2)
     return m
 
 
@@ -755,14 +982,15 @@ def build_depot() -> MeshBuilder:
     hx, hz = LAYOUT["booms"]["1"][0]["hinge"]
     for p in boom.parts.values():
         p["pos"] = [(x + hx, y, z + hz) for x, y, z in p["pos"]]
-    return merge(build_base(), build_parking(1), build_gate(1), boom, build_dock(1), build_warehouse(1), build_office(1))
+    return merge(build_base(), build_props(), build_parking(1), build_gate(1), boom, build_dock(1),
+                 build_warehouse(1), build_office(1))
 
 
-VEHICLES = ("pickup_open", "pickup", "mini_truck", "container_truck")
+VEHICLES = tuple(VEHICLE_BUILDERS)
 
 
 def models() -> dict:
-    out = {"base": build_base(), "construction": build_construction()}
+    out = {"base": build_base(), "props": build_props(), "construction": build_construction()}
     for lvl in (1, 2, 3):
         out[f"parking_{lvl}"] = build_parking(lvl)
         out[f"gate_{lvl}"] = build_gate(lvl)
@@ -772,11 +1000,13 @@ def models() -> dict:
     out["boom_long"] = build_boom(7.0, 1)
     out["boom_short"] = build_boom(4.0, 1)
     out["boom_short_r"] = build_boom(4.0, -1)
-    out["pickup_open"] = build_pickup_open()
-    out["pickup"] = build_pickup()
-    out["mini_truck"] = build_mini_truck()
-    out["container_truck"] = build_container_truck()
+    for name, builder in VEHICLE_BUILDERS.items():
+        out[name] = builder(False)[0]
+        if name in VEHICLES_WITH_DOORS:
+            out[f"{name}_open"] = builder(True)[0]
+    out["cargo_crate"] = build_cargo_crate()
     out["worker"] = build_worker()
+    out["worker_carry"] = build_worker(carry=True)
     out["depot"] = build_depot()
     return out
 
@@ -788,9 +1018,18 @@ def bounds_xz(builder: MeshBuilder):
 
 
 # Anggaran segitiga (diuji) agar aset tetap ringan di HP kelas menengah.
-BUDGET = {"base": 6000, "depot": 9000, "construction": 400, "worker": 300, "pickup": 900,
-          "pickup_open": 900, "mini_truck": 1000, "container_truck": 1400}
+BUDGET = {"base": 6000, "props": 4000, "depot": 12000, "construction": 400, "worker": 300,
+          "worker_carry": 400, "cargo_crate": 200}
+VEHICLE_BUDGET = 1600
 MODULE_BUDGET = 2500
+
+
+def budget(name: str) -> int:
+    if name in BUDGET:
+        return BUDGET[name]
+    if name.removesuffix("_open") in VEHICLE_BUILDERS:
+        return VEHICLE_BUDGET
+    return MODULE_BUDGET
 
 
 def main(out_dir: str) -> None:
@@ -803,6 +1042,9 @@ def main(out_dir: str) -> None:
     # Rintangan per modul (untuk uji tabrakan) & ukuran tapak kendaraan.
     layout["obstacles"] = {name: b.blocks for name, b in built.items() if b.blocks and name != "depot"}
     layout["vehicle_bounds"] = {name: bounds_xz(built[name]) for name in VEHICLES}
+    # Titik palet muatan per kendaraan (koordinat model), terurut depan → belakang.
+    layout["vehicle_cargo"] = {name: VEHICLE_BUILDERS[name](False)[1] for name in VEHICLES}
+    layout["vehicles_with_doors"] = list(VEHICLES_WITH_DOORS)
     with open(os.path.join(out_dir, "depot_layout.json"), "w") as f:
         json.dump(layout, f, indent=1)
 

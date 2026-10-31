@@ -125,8 +125,19 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Perbaikan respons: layar statis baru diperbarui puluhan detik setelah diketuk (vsync ditahan untuk SurfaceView di HP uji). Diatasi dengan mode render TextureView; diuji 5/5 percobaan responsif < 1,2 detik.
 - [x] Build pengujian `--dart-define=DEV_TOOLS=true`: pengali kecepatan 1×/10×/60× (bukan fitur pemain).
 
+### 2026-10-31 — Penyempurnaan sebelum Tahap 4 (permintaan user)
+
+- [x] **Model 3D kendaraan dibedakan bentuknya**: pikap (kabin bermoncong, bak terbuka), mobil box (kabin semi cab-over perak, box aluminium), truk mini (cab-over biru, box tinggi), **truk engkel bak** baru (cab-over kuning, bak kayu, roda belakang ganda), truk engkel kontainer (cab-over merah). Ikon kendaraan mengikuti bentuk & warna 3D.
+- [x] **Animasi muat**: barang disiapkan di platform dock lalu berkurang; pekerja memanggul kardus pintu → bak (sopir memuat sendiri bila belum ada staf); kendaraan kosong saat datang, terisi bertahap (palet di bak), penuh saat keluar, kosong lagi saat pulang; pintu box terbuka selama dimuat.
+- [x] **Dekorasi depot** (`props`): gazebo istirahat, parkir motor karyawan, mobil staf, kontainer bekas, menara air, genset, tumpukan ban, forklift, tong sampah, papan nama, pot bunga. Semua tercatat sebagai rintangan; uji tabrakan 5 kendaraan tetap lulus.
+- [x] **Peta**: garis oranye jalan tol dihapus; tanpa kontrak berjalan peta hanya jaringan jalan.
+- [x] **Mode dev tambah uang** (build `DEV_TOOLS`): ketuk kas → +10 jt / +100 jt / +1 M, dicatat sebagai "Dana mode dev".
+- [x] Bilah atas: kas format ringkas ("Rp560,1 jt") agar tidak menabrak tombol keluar.
+- [x] Diuji di HP: 3 kendaraan berbeda di parkir, truk engkel dimuat 2 staf, antrean dock, konstruksi gerbang, peta tanpa garis oranye.
+- [x] Ekstrak OSM Jawa (Geofabrik) selesai diunduh.
+
 ## Berikutnya
 
 - [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.
-- [ ] Map pack 6 kota dari ekstrak Jawa (unduhan masih berjalan) & verifikasi koordinat depot.
+- [ ] Map pack 6 kota dari ekstrak Jawa (sudah terunduh) & verifikasi koordinat depot.
 - [ ] **Tahap 4 — business simulation**: barang & warehouse inventory, supplier, karyawan lengkap (skill, kelelahan), maintenance & workshop, asuransi, kecelakaan, laporan keuangan; penyeimbangan ekonomi.

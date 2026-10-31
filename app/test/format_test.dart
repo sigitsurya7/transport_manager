@@ -8,6 +8,14 @@ void main() {
     expect(formatRupiah(0), 'Rp0');
   });
 
+  test('rupiah ringkas untuk bilah atas', () {
+    expect(formatRupiahCompact(850000), 'Rp850.000');
+    expect(formatRupiahCompact(2500000), 'Rp2,50 jt');
+    expect(formatRupiahCompact(560636123), 'Rp560,6 jt');
+    expect(formatRupiahCompact(1150328552), 'Rp1,15 M');
+    expect(formatRupiahCompact(-12000000), '-Rp12,0 jt');
+  });
+
   test('jam game: detik 0 = Hari 1 pukul 06.00', () {
     expect(formatGameClock(0), 'Hari 1 · 06.00');
     expect(formatGameClock(18 * 3600 + 5 * 60), 'Hari 2 · 00.05');

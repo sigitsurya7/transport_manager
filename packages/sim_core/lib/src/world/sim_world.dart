@@ -329,6 +329,12 @@ class SimWorld {
     _serveGateQueue(depot);
   }
 
+  /// Mode pengembang: tambah kas lewat buku besar (akun terpisah, ikut tersimpan).
+  void devGrant(int amountIdr) {
+    if (amountIdr <= 0) throw ArgumentError.value(amountIdr, 'amountIdr');
+    ledger.post(LedgerEntry(time: now, account: LedgerAccount.devAdjustment, amountIdr: amountIdr, ref: 'dev'));
+  }
+
   // ---------------------------------------------------------------- armada & karyawan
 
   List<PurchaseProblem> purchaseProblems(int depotId, String modelId) {

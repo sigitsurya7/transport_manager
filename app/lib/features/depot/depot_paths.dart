@@ -62,6 +62,15 @@ class DepotLayout {
           ((b[0] as num).toDouble(), (b[1] as num).toDouble(), (b[2] as num).toDouble(), (b[3] as num).toDouble()),
       ];
 
+  /// Titik palet muatan di lantai bak (koordinat model), depan → belakang.
+  List<(double, double, double)> vehicleCargo(String visual) => [
+        for (final c in ((json['vehicle_cargo'] as Map)[visual] as List?) ?? const [])
+          ((c[0] as num).toDouble(), (c[1] as num).toDouble(), (c[2] as num).toDouble()),
+      ];
+
+  /// Kendaraan dengan pintu belakang (punya model `<visual>_open`).
+  bool hasDoors(String visual) => ((json['vehicles_with_doors'] as List?) ?? const []).contains(visual);
+
   /// Tapak kendaraan (koordinat model): (xMin, xMax, zMin, zMax).
   (double, double, double, double) vehicleBounds(String visual) {
     final b = ((json['vehicle_bounds'] as Map)[visual] as List).cast<num>();
@@ -232,7 +241,7 @@ class DepotMotion {
       case TripPhase.gateIn:
         final start = _inQueueSpot(0);
         // Belok dari lajur kiri, lalu lurus beberapa meter sebelum berhenti di palang.
-        final approach = DepotPath(start, [fw(gx - 4.5, road), fw(gx, gz + 5.8), fw(gx, gz + 3.2)], startHeading: 0);
+        final approach = DepotPath(start, [fw(gx - 5.0, road), fw(gx, road - 0.4), fw(gx, gz + 3.2)], startHeading: 0);
         final drive = DepotPath((x: gx, z: gz + 3.2), [fw(gx, gz - 2.5), fw(gx, lane + 1.5)]);
         return _staged(approach, drive, p);
       case TripPhase.toSlot:

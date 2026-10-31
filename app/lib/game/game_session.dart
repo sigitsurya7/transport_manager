@@ -276,6 +276,12 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Mode pengembang (build DEV_TOOLS): tambah kas.
+  void devAddCash(int amountIdr) {
+    assert(devTools, 'devAddCash hanya untuk build DEV_TOOLS');
+    _command(() => world.devGrant(amountIdr));
+  }
+
   void startUpgrade(FacilityType type) => _command(() => world.startUpgrade(depot.id, type));
   void buyVehicle(String modelId) => _command(() => world.buyVehicle(depot.id, modelId));
   void hire(EmployeeRole role) => _command(() => world.hire(depot.id, role));

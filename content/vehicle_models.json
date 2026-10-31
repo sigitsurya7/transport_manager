@@ -3,7 +3,7 @@
   "models": [
     {
       "id": "pickup_open_1t",
-      "name": "Pikap losbak 1 ton",
+      "name": "Pikap bak 1 ton",
       "class": "pickup_open",
       "max_speed_kmh": 90,
       "empty_weight_kg": 1200,
@@ -15,7 +15,7 @@
     },
     {
       "id": "pickup_box_1t",
-      "name": "Pikap box 1 ton",
+      "name": "Mobil box 1 ton",
       "class": "pickup_box",
       "max_speed_kmh": 90,
       "empty_weight_kg": 1350,
@@ -23,11 +23,11 @@
       "toll_golongan": 1,
       "fuel_l_per_100km": 11,
       "price_idr": 215000000,
-      "visual": "pickup"
+      "visual": "box_car"
     },
     {
       "id": "mini_truck_2t",
-      "name": "Mini truck 2 ton",
+      "name": "Truk mini box 2 ton",
       "class": "mini_truck",
       "max_speed_kmh": 80,
       "empty_weight_kg": 2100,
@@ -36,6 +36,18 @@
       "fuel_l_per_100km": 13,
       "price_idr": 290000000,
       "visual": "mini_truck"
+    },
+    {
+      "id": "engkel_truck_4t",
+      "name": "Truk engkel bak 4 ton",
+      "class": "light_truck",
+      "max_speed_kmh": 80,
+      "empty_weight_kg": 3300,
+      "payload_kg": 4200,
+      "toll_golongan": 2,
+      "fuel_l_per_100km": 16,
+      "price_idr": 380000000,
+      "visual": "engkel_truck"
     },
     {
       "id": "container_truck_4t",

@@ -58,7 +58,7 @@ void main() {
             const AppLogo(size: 96),
             const SizedBox(height: 16),
             Wrap(spacing: 12, runSpacing: 12, children: [
-              for (final v in ['pickup_open', 'pickup', 'mini_truck', 'container_truck'])
+              for (final v in ['pickup_open', 'box_car', 'mini_truck', 'engkel_truck', 'container_truck'])
                 SizedBox(width: 120, height: 60, child: VehicleIcon(v, width: 120)),
             ]),
             const SizedBox(height: 16),
@@ -68,7 +68,7 @@ void main() {
           ]),
         ),
       ),
-      const Size(560, 380),
+      const Size(680, 380),
       2,
       'build/icon_preview.png',
     );

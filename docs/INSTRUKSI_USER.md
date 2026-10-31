@@ -84,3 +84,19 @@ Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Ara
 > Mobil menabrak bangunan, pastikan tidak ada bangunan atau properti lain yang menabrak.
 >
 > Buat aset itu terlebih dahulu. Dan untuk icon jangan generic.
+
+## 2026-10-31 — Sebelum Tahap 4: model, animasi muat, peta, dekorasi, mode dev
+
+> Model 3D kendaraan juga berbeda, mobil pikap, mobil box, truk mini, truk engkel.
+>
+> Buat animasi saat load barang, seperti menaikan barang ke mobil, mobil kosong dan mobil terisi. Lalu ada manusia yang loading barang.
+>
+> Pada peta ada garing orange, hapus saja garis orange. jika tidak ada kontrak di jalankan maka kosong pada map.
+>
+> Tambahkan beberapa model 3D agar di tab depot tidak terlalu kosong.
+>
+> Tambahkan mode dev yang bisa menambahkan uang.
+
+## 2026-10-31 — Lanjutkan
+
+> lanjutkan

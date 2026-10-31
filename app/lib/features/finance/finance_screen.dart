@@ -13,6 +13,7 @@ const _accountLabel = {
   LedgerAccount.wages: 'Gaji karyawan',
   LedgerAccount.vehiclePurchase: 'Pembelian kendaraan',
   LedgerAccount.facilityUpgrade: 'Pembangunan fasilitas',
+  LedgerAccount.devAdjustment: 'Dana mode dev',
 };
 
 class FinanceScreen extends StatelessWidget {

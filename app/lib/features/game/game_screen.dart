@@ -56,6 +56,47 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  void _showDevMoney() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: AppColors.surface,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mode dev: tambah uang',
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Dicatat di buku besar sebagai "Dana mode dev". Hanya ada di build pengujian.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final amount in const [10000000, 100000000, 1000000000])
+                  FilledButton(
+                    onPressed: () {
+                      session.devAddCash(amount);
+                      Navigator.pop(context);
+                    },
+                    child: Text('+${formatRupiah(amount)}'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Future<void> _exit() async {
     await session.close();
     if (mounted) Navigator.of(context).pop();
@@ -75,29 +116,53 @@ class _GameScreenState extends State<GameScreen> {
           titleSpacing: 16,
           title: ListenableBuilder(
             listenable: session,
-            builder: (_, _) => Row(children: [
-              const Icon(Icons.schedule_rounded, size: 18, color: AppColors.textMuted),
-              const SizedBox(width: 6),
-              Text(formatGameClock(session.world.now),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              if (GameSession.devTools) ...[
+            builder: (_, _) => Row(
+              children: [
+                const Icon(Icons.schedule_rounded, size: 18, color: AppColors.textMuted),
                 const SizedBox(width: 6),
-                ActionChip(
-                  visualDensity: VisualDensity.compact,
-                  label: Text('${session.clock.speedMultiplier}×'),
-                  onPressed: session.cycleSpeed,
+                Text(
+                  formatGameClock(session.world.now),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                if (GameSession.devTools) ...[
+                  const SizedBox(width: 6),
+                  ActionChip(
+                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    label: Text('${session.clock.speedMultiplier}×'),
+                    onPressed: session.cycleSpeed,
+                  ),
+                ],
+                const SizedBox(width: 10),
+                const Spacer(),
+                const GlyphIcon(GameGlyph.finance, size: 20, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Flexible(
+                  flex: 100,
+                  // Angka kas panjang menyusut agar tidak menabrak tombol keluar.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      // Mode dev: ketuk kas untuk menambah uang.
+                      onTap: GameSession.devTools ? _showDevMoney : null,
+                      child: Text(
+                        formatRupiahCompact(session.world.cashIdr),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          decoration: GameSession.devTools ? TextDecoration.underline : null,
+                          decorationStyle: TextDecorationStyle.dotted,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              const Spacer(),
-              const GlyphIcon(GameGlyph.finance, size: 20, color: AppColors.accent),
-              const SizedBox(width: 6),
-              Text(formatRupiah(session.world.cashIdr),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            ]),
+            ),
           ),
-          actions: [
-            IconButton(tooltip: 'Simpan & keluar', onPressed: _exit, icon: const Icon(Icons.logout_rounded)),
-          ],
+          actions: [IconButton(tooltip: 'Simpan & keluar', onPressed: _exit, icon: const Icon(Icons.logout_rounded))],
         ),
         body: IndexedStack(
           index: _tab,
@@ -141,21 +206,26 @@ class _OfflineSummarySheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Selama kamu pergi', style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800)),
+            Text(
+              'Selama kamu pergi',
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
             Text(
               hours >= 1
                   ? '${hours.toStringAsFixed(1).replaceAll('.', ',')} jam berlalu'
                   : summary.realElapsed.inMinutes >= 1
-                      ? '${summary.realElapsed.inMinutes} menit berlalu'
-                      : 'Kurang dari 1 menit berlalu',
+                  ? '${summary.realElapsed.inMinutes} menit berlalu'
+                  : 'Kurang dari 1 menit berlalu',
               style: const TextStyle(color: AppColors.textMuted),
             ),
             if (summary.truncated)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('Waktu offline dibatasi 48 jam; sisanya tidak dihitung.',
-                    style: TextStyle(color: AppColors.accent)),
+                child: Text(
+                  'Waktu offline dibatasi 48 jam; sisanya tidak dihitung.',
+                  style: TextStyle(color: AppColors.accent),
+                ),
               ),
             const SizedBox(height: 12),
             if (summary.entries.isEmpty)
@@ -169,13 +239,16 @@ class _OfflineSummarySheet extends StatelessWidget {
                     for (final e in summary.entries)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          SizedBox(
-                            width: 56,
-                            child: Text(formatGameTime(e.time), style: const TextStyle(color: AppColors.textMuted)),
-                          ),
-                          Expanded(child: Text(logText(session.world, e))),
-                        ]),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 56,
+                              child: Text(formatGameTime(e.time), style: const TextStyle(color: AppColors.textMuted)),
+                            ),
+                            Expanded(child: Text(logText(session.world, e))),
+                          ],
+                        ),
                       ),
                   ],
                 ),

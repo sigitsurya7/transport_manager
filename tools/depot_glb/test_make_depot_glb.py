@@ -88,7 +88,7 @@ class GlbTest(unittest.TestCase):
         """Aset harus tetap ringan untuk HP kelas menengah."""
         for name, builder in g.models().items():
             tris = sum(len(p["idx"]) // 3 for p in builder.parts.values())
-            self.assertLessEqual(tris, g.BUDGET.get(name, g.MODULE_BUDGET), name)
+            self.assertLessEqual(tris, g.budget(name), name)
 
     def test_model_fasilitas_sesuai_konten(self):
         """Setiap level di content/facilities.json punya modul GLB."""
@@ -106,6 +106,10 @@ class GlbTest(unittest.TestCase):
             self.assertIn(key, layout)
         for level in ("1", "2", "3"):
             self.assertEqual(len(layout["docks"][level]), len(g.DOCKS[int(level)]))
+        for name in g.VEHICLES:
+            self.assertGreaterEqual(len(layout["vehicle_cargo"][name]), 4, name)
+            xmin = layout["vehicle_bounds"][name][0]
+            self.assertGreaterEqual(xmin, -2.7, f"{name}: bak terlalu panjang untuk posisi dock")
 
 
 if __name__ == "__main__":

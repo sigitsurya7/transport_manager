@@ -76,8 +76,17 @@ class _DepotScreenState extends State<DepotScreen> {
   final Map<FacilityType, (String, Node)> _modules = {};
   final List<(BoomSpec, Node)> _booms = [];
   int? _boomLevel;
-  final Map<int, (String, Node)> _vehicles = {};
-  final List<Node> _staff = [];
+  final Map<int, _VehicleView> _vehicles = {};
+
+  /// Staf gudang: (tangan kosong, memanggul kardus); satu tampil, satu disembunyikan.
+  final List<(Node, Node)> _staff = [];
+
+  /// Barang yang disiapkan di platform dock (berkurang saat dimuat).
+  final List<Node> _staging = [];
+  static const _stagingPerDock = 4;
+
+  /// Sopir yang memuat sendiri bila belum ada staf gudang.
+  (Node, Node)? _driverLoader;
   Node? _guard;
   Node? _construction;
   final Map<String, Node> _templates = {};
@@ -122,7 +131,9 @@ class _DepotScreenState extends State<DepotScreen> {
         )
         ..exposure = 1.0;
       final layout = DepotLayout.parse(await rootBundle.loadString('assets/models/depot_layout.json'));
-      _scene.add(await _instance('base'));
+      _scene
+        ..add(await _instance('base'))
+        ..add(await _instance('props'));
       _guard = await _instance('worker');
       _scene.add(_guard!);
       _layout = layout;
@@ -184,21 +195,43 @@ class _DepotScreenState extends State<DepotScreen> {
       _boomLevel = gateLevel;
     }
     for (final v in world.vehicles.values) {
+      final visual = v.model.visual;
       final current = _vehicles[v.id];
-      if (current?.$1 == v.model.visual) continue;
-      final node = await _instance(v.model.visual);
-      if (current != null) _scene.remove(current.$2);
-      _scene.add(node);
-      _vehicles[v.id] = (v.model.visual, node);
+      if (current?.visual == visual) continue;
+      final view = _VehicleView(
+        visual: visual,
+        closed: await _instance(visual),
+        open: layout.hasDoors(visual) ? await _instance('${visual}_open') : null,
+        slots: layout.vehicleCargo(visual),
+        crates: [for (final _ in layout.vehicleCargo(visual)) await _instance('cargo_crate')],
+      );
+      current?.nodes.forEach(_scene.remove);
+      view.nodes.forEach(_scene.add);
+      _vehicles[v.id] = view;
+    }
+    Future<(Node, Node)> pair() async {
+      final nodes = (await _instance('worker'), await _instance('worker_carry'));
+      _scene
+        ..add(nodes.$1)
+        ..add(nodes.$2);
+      return nodes;
+    }
+
+    _driverLoader ??= await pair();
+    while (_staging.length < 3 * _stagingPerDock) {
+      final crate = await _instance('cargo_crate');
+      _staging.add(crate);
+      _scene.add(crate);
     }
     final wantStaff = math.min(depot.warehouseStaff, _maxVisibleStaff);
     while (_staff.length < wantStaff) {
-      final node = await _instance('worker');
-      _staff.add(node);
-      _scene.add(node);
+      _staff.add(await pair());
     }
     while (_staff.length > wantStaff) {
-      _scene.remove(_staff.removeLast());
+      final (a, b) = _staff.removeLast();
+      _scene
+        ..remove(a)
+        ..remove(b);
     }
     final construction = depot.construction;
     if (construction == null) {
@@ -233,9 +266,10 @@ class _DepotScreenState extends State<DepotScreen> {
       final boomOpen = <int, double>{};
       final loadingDocks = <int>[];
       for (final snap in snaps) {
-        final node = _vehicles[snap.vehicleId]?.$2;
-        if (node != null) {
-          _place(node, motion.pose(snap, dockLevel: dockLevel, gateLevel: gateLevel, outQueueAhead: outQueue));
+        final view = _vehicles[snap.vehicleId];
+        if (view != null) {
+          final pose = motion.pose(snap, dockLevel: dockLevel, gateLevel: gateLevel, outQueueAhead: outQueue);
+          _placeVehicle(view, snap, pose);
         }
         if (snap.phase == TripPhase.gateOut || snap.phase == TripPhase.gateIn) {
           final lane = snap.gateLane ?? 0;
@@ -244,6 +278,7 @@ class _DepotScreenState extends State<DepotScreen> {
         if (snap.phase == TripPhase.loading) loadingDocks.add(snap.dock ?? 0);
       }
       _animateBooms(boomOpen);
+      _placeStaging(snaps, motion.layout.docks(dockLevel));
       _animatePeople(motion, elapsed.inMicroseconds / 1e6, dockLevel, gateLevel, loadingDocks);
     }
     return PerspectiveCamera(
@@ -251,6 +286,69 @@ class _DepotScreenState extends State<DepotScreen> {
       target: toEngine(_OrbitCamera.target.x, _OrbitCamera.target.y, _OrbitCamera.target.z),
       fovRadiansY: math.pi / 4.2,
     );
+  }
+
+  /// Kendaraan + muatannya. Kosong saat berangkat ke dock & saat pulang;
+  /// terisi bertahap selama dimuat (pintu box terbuka); penuh sampai keluar.
+  void _placeVehicle(_VehicleView view, VehicleSnapshot snap, FloorPose? pose) {
+    final loading = snap.phase == TripPhase.loading;
+    final showOpen = loading && view.open != null;
+    _place(view.closed, showOpen ? null : pose);
+    if (view.open != null) _place(view.open!, showOpen ? pose : null);
+
+    final count = pose == null ? 0 : _cargo(view, snap).loaded;
+    for (final (i, crate) in view.crates.indexed) {
+      if (i >= count || pose == null) {
+        _place(crate, null);
+        continue;
+      }
+      final (lx, ly, lz) = view.slots[i];
+      final fx = math.cos(pose.heading), fz = -math.sin(pose.heading);
+      _place(crate, (x: pose.x + fx * lx - fz * lz, z: pose.z + fz * lx + fx * lz, heading: pose.heading), y: ly);
+    }
+  }
+
+  /// Jumlah palet muatan untuk trip ini (`full`) dan yang sudah di kendaraan
+  /// (`loaded`): kosong sebelum dimuat, bertambah selama dimuat, penuh sampai
+  /// keluar depot, kosong lagi saat pulang (barang sudah dibongkar).
+  ({int full, int loaded}) _cargo(_VehicleView view, VehicleSnapshot snap) {
+    final world = session.world;
+    final trip = world.trips[snap.tripId];
+    if (trip == null || view.crates.isEmpty) return (full: 0, loaded: 0);
+    final vehicle = world.vehicles[snap.vehicleId]!;
+    final weight = world.contracts[trip.contractId]!.weightKg;
+    final share = (weight / vehicle.model.payloadKg).clamp(0.2, 1.0);
+    final full = math.max(1, (view.crates.length * share).ceil());
+    final fill = switch (snap.phase) {
+      TripPhase.loading => snap.phaseProgress,
+      TripPhase.toGate || TripPhase.waitGateOut || TripPhase.gateOut => 1.0,
+      _ => 0.0,
+    };
+    return (full: full, loaded: (full * fill).ceil().clamp(0, full));
+  }
+
+  /// Barang disiapkan di platform dock begitu kendaraan ditugaskan ke dock,
+  /// lalu berkurang seiring dipindahkan ke kendaraan.
+  void _placeStaging(List<VehicleSnapshot> snaps, List<FloorPoint> docks) {
+    var used = 0;
+    final perDock = <int, int>{};
+    for (final snap in snaps) {
+      if (snap.dock == null || !const {TripPhase.toDock, TripPhase.loading}.contains(snap.phase)) continue;
+      final view = _vehicles[snap.vehicleId];
+      if (view == null) continue;
+      final c = _cargo(view, snap);
+      perDock[snap.dock!.clamp(0, docks.length - 1)] = math.min(c.full - c.loaded, _stagingPerDock);
+    }
+    for (final MapEntry(key: d, value: n) in perDock.entries) {
+      final x = docks[d].x;
+      const spots = [(-1.25, -4.85), (1.25, -4.85), (-1.25, -3.95), (1.25, -3.95)];
+      for (var i = 0; i < n && used < _staging.length; i++) {
+        _place(_staging[used++], (x: x + spots[i].$1, z: spots[i].$2, heading: 0), y: 1.1);
+      }
+    }
+    for (var i = used; i < _staging.length; i++) {
+      _place(_staging[i], null);
+    }
   }
 
   /// Gerbang 1 jalur: satu palang. Multi-gate: palang ke-i melayani jalur ke-i.
@@ -261,30 +359,49 @@ class _DepotScreenState extends State<DepotScreen> {
     }
   }
 
-  /// Staf gudang: bolak-balik pintu ↔ bak kendaraan di dock yang sedang
-  /// memuat; sisanya siaga di tepi dock. Petugas jaga berdiri di pos gerbang.
+  /// Bongkar muat: staf gudang (atau sopir bila belum ada staf) bolak-balik
+  /// dari pintu gudang ke bak kendaraan memanggul kardus, lalu kembali dengan
+  /// tangan kosong. Staf yang tidak bekerja siaga di tepi dock. Petugas jaga
+  /// berdiri di pos gerbang.
   void _animatePeople(DepotMotion motion, double seconds, int dockLevel, int gateLevel, List<int> loadingDocks) {
     final docks = motion.layout.docks(dockLevel);
-    const platformY = 1.1;
-    for (final (i, node) in _staff.indexed) {
-      if (loadingDocks.isNotEmpty) {
-        final dock = docks[loadingDocks[i % loadingDocks.length].clamp(0, docks.length - 1)];
-        final side = (i ~/ loadingDocks.length).isEven ? -0.8 : 0.8;
-        final f = (seconds / 2.6 + i * 0.37) % 2;
-        final walk = f <= 1 ? f : 2 - f;
-        _place(node, (x: dock.x + side, z: -5.0 + walk * 1.8, heading: f <= 1 ? headingSouth : headingNorth), y: platformY);
+    const platformY = 1.1, doorZ = -5.05, edgeZ = -3.2;
+    final loaders = _staff.isNotEmpty ? _staff : [?_driverLoader];
+    if (_staff.isNotEmpty && _driverLoader != null) {
+      _place(_driverLoader!.$1, null);
+      _place(_driverLoader!.$2, null);
+    }
+    for (final (i, (empty, carry)) in loaders.indexed) {
+      if (loadingDocks.isEmpty) {
+        _place(carry, null);
+        if (identical(loaders, _staff)) {
+          final dock = docks[i % docks.length];
+          _place(
+            empty,
+            (x: dock.x - 1.4 + (i ~/ docks.length) * 0.7, z: -4.6, heading: headingSouth + 0.3 * math.sin(seconds * 0.4 + i)),
+            y: platformY,
+          );
+        } else {
+          _place(empty, null);
+        }
+        continue;
+      }
+      final dock = docks[loadingDocks[i % loadingDocks.length].clamp(0, docks.length - 1)];
+      final lane = (i ~/ loadingDocks.length) % 3;
+      final x = dock.x + const [-0.55, 0.55, 0.0][lane];
+      final f = (seconds / 2.4 + i * 0.41) % 1;
+      if (f < 0.5) {
+        // memanggul kardus menuju bak
+        _place(carry, (x: x, z: doorZ + (edgeZ - doorZ) * (f / 0.5), heading: headingSouth), y: platformY);
+        _place(empty, null);
       } else {
-        final dock = docks[i % docks.length];
-        _place(
-          node,
-          (x: dock.x - 1.6 + (i ~/ docks.length) * 0.7, z: -4.6, heading: headingSouth + 0.3 * math.sin(seconds * 0.4 + i)),
-          y: platformY,
-        );
+        _place(empty, (x: x, z: edgeZ - (edgeZ - doorZ) * ((f - 0.5) / 0.5), heading: headingNorth), y: platformY);
+        _place(carry, null);
       }
     }
     final guard = _guard;
     if (guard != null) {
-      final booth = gateLevel == 1 ? (x: 4.4, z: 13.4) : (x: 4.6, z: 13.2);
+      final booth = gateLevel == 1 ? (x: 5.0, z: 13.6) : (x: 5.2, z: 13.4);
       _place(guard, (x: booth.x, z: booth.z, heading: math.pi + 0.4 * math.sin(seconds * 0.3)));
     }
   }
@@ -455,4 +572,18 @@ class _VehicleRow extends StatelessWidget {
       Text('${(vehicle.odometerM / 1000).toStringAsFixed(0)} km', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
     ]);
   }
+}
+
+/// Node 3D satu kendaraan: model tertutup, varian pintu terbuka (box), dan
+/// palet muatan di titik-titik lantai bak.
+class _VehicleView {
+  _VehicleView({required this.visual, required this.closed, required this.open, required this.slots, required this.crates});
+
+  final String visual;
+  final Node closed;
+  final Node? open;
+  final List<(double, double, double)> slots;
+  final List<Node> crates;
+
+  List<Node> get nodes => [closed, ?open, ...crates];
 }

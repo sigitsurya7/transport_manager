@@ -15,6 +15,16 @@ String formatRupiah(int idr) {
   return '${negative ? '-' : ''}Rp$buf';
 }
 
+/// Ringkas untuk ruang sempit: "Rp850.000", "Rp560,6 jt", "Rp1,15 M".
+String formatRupiahCompact(int idr) {
+  final sign = idr < 0 ? '-' : '';
+  final v = idr.abs();
+  String dec(double x, int digits) => x.toStringAsFixed(digits).replaceAll('.', ',');
+  if (v < 1000000) return formatRupiah(idr);
+  if (v < 1000000000) return '${sign}Rp${dec(v / 1e6, v < 10000000 ? 2 : 1)} jt';
+  return '${sign}Rp${dec(v / 1e9, 2)} M';
+}
+
 /// "Hari 3 · 14.05"
 String formatGameClock(int simSeconds) {
   final t = simSeconds + _epochOffsetS;
