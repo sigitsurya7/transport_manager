@@ -1,0 +1,51 @@
+import '../contracts/contract.dart';
+import '../contracts/contract_tiers.dart';
+import '../finance/economy_config.dart';
+import '../trips/depot_ops_config.dart';
+import '../vehicle/vehicle.dart';
+
+/// Semua katalog data-driven yang dibutuhkan simulasi (folder `content/`).
+/// Dimuat sekali; tidak disimpan di save (save hanya menyimpan id).
+class GameContent {
+  const GameContent({
+    required this.tierRules,
+    required this.vehicleModels,
+    required this.cargoTypes,
+    required this.storeCustomers,
+    required this.economy,
+    required this.depotOps,
+  });
+
+  /// [files]: isi JSON per nama file di `content/`.
+  factory GameContent.fromJsonFiles(Map<String, Map<String, dynamic>> files) {
+    Map<String, dynamic> f(String name) =>
+        files[name] ?? (throw FormatException('Konten hilang: $name'));
+    final content = GameContent(
+      tierRules: ContractTierRules.fromJson(f('contract_tiers.json')),
+      vehicleModels: VehicleModel.catalogFromJson(f('vehicle_models.json')),
+      cargoTypes: CargoType.catalogFromJson(f('cargo_types.json')),
+      storeCustomers: (f('customers.json')['store_to_store'] as List).cast<String>(),
+      economy: EconomyConfig.fromJson(f('economy.json')),
+      depotOps: DepotOpsConfig.fromJson(f('depot_ops.json')),
+    );
+    if (content.storeCustomers.isEmpty) throw const FormatException('Daftar pelanggan kosong');
+    if (content.cargoTypes.isEmpty) throw const FormatException('Katalog barang kosong');
+    return content;
+  }
+
+  static const fileNames = [
+    'contract_tiers.json',
+    'vehicle_models.json',
+    'cargo_types.json',
+    'customers.json',
+    'economy.json',
+    'depot_ops.json',
+  ];
+
+  final ContractTierRules tierRules;
+  final Map<String, VehicleModel> vehicleModels;
+  final Map<String, CargoType> cargoTypes;
+  final List<String> storeCustomers;
+  final EconomyConfig economy;
+  final DepotOpsConfig depotOps;
+}

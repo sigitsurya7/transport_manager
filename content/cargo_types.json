@@ -1,0 +1,9 @@
+{
+  "_comment": "Barang untuk kontrak awal (retail toko ke toko). Kategori, suhu, dan kedaluwarsa ditambah di Tahap 4.",
+  "cargo": [
+    {"id": "air_galon", "name": "Air mineral galon", "unit": "galon", "unit_weight_kg": 19},
+    {"id": "beras_25", "name": "Beras karung 25 kg", "unit": "karung", "unit_weight_kg": 25},
+    {"id": "minyak_goreng", "name": "Minyak goreng (karton 12 L)", "unit": "karton", "unit_weight_kg": 12},
+    {"id": "mi_instan", "name": "Mi instan (dus)", "unit": "dus", "unit_weight_kg": 3}
+  ]
+}

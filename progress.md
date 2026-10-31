@@ -67,8 +67,21 @@ Kendala di komputer dev: Python 3 belum terpasang (pipeline peta & pembuat GLB),
 - [x] `fetch_overpass.sh` + `merge_osm.py` (unduh jalan per ubin + retry, lalu gabung) sebagai alternatif ekstrak Jawa ±900 MB.
 - [~] **Benchmark routing data nyata ditunda atas permintaan user** (koneksi ±40 KB/s). Unduhan Geofabrik dijeda di 264/899 MB (lanjutkan dengan `curl -C -`); 4 dari 9 ubin koridor Jakarta–Bandung tersimpan di `raw/tiles`. Logika estimasi waktu tempuh akan ditinjau bersama user.
 
+### 2026-10-31 — Tahap 2b (bagian 1): siklus pengiriman di sim_core
+
+Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
+
+- [x] Konten data-driven baru: `vehicle_models.json`, `cargo_types.json`, `customers.json`, `economy.json`, `depot_ops.json` (dimuat lewat `GameContent`).
+- [x] Model domain: `Depot` (slot parkir), `Vehicle` + `VehicleModel` (odometer tidak pernah reset), `Driver`, `Contract` + `CargoType`, `Ledger` (kas = jumlah entri), `Trip` + `TripLeg`.
+- [x] `SimWorld`: game baru (1 depot 3 slot, 1 pikap box di slot 0, 1 sopir, modal awal), tawaran kontrak toko ke toko deterministik dari seed, **cek dispatch** (kendaraan/sopir sibuk, tier kelas kendaraan, kapasitas, rute), **estimasi tol vs non-tol sebelum menerima** (ETA, tenggat, pendapatan setelah penalti, BBM, tol, untung).
+- [x] Siklus trip lewat event queue: slot → dock → muat → gerbang → jalan berangkat → bongkar → jalan pulang → gerbang masuk → slot → inspeksi. Pembayaran, BBM, tol dicatat di ledger; log kejadian untuk ringkasan.
+- [x] **Waktu tempuh pluggable** (`TravelTimeModel`); default sementara = estimasi A*. Siap diganti logika dari user tanpa mengubah alur trip.
+- [x] Posisi kendaraan untuk renderer = `f(rute, waktu)` mengikuti geometri jalan nyata (`RouteTrack`), tanpa update per frame.
+- [x] Save/load seluruh state + antrean event ke JSON.
+- [x] 15 test baru (total **51 lulus**): hasil akhir persis sama dengan estimasi, semua fase dilewati berurutan, posisi depot → tujuan, aturan dispatch, tol lebih cepat tetapi berbayar, penalti telat, satu lompatan panjang == banyak langkah pendek, save di tengah jalan → load → hasil akhir identik.
+
 ## Berikutnya
 
 - [ ] Keputusan engine final (rekomendasi: flutter_scene).
 - [ ] Verifikasi koordinat kandidat depot.
-- [ ] **Tahap 2b — core prototype**, mulai dari bagian yang tidak bergantung engine 3D.
+- [ ] Tahap 2b bagian 2: `packages/persistence` (Drift, satu file per save slot, autosave), lalu `app/` (New Game → pilih kota & depot → depot 3D → kontrak → dispatch → peta rute).
