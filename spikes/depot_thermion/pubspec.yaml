@@ -1,0 +1,20 @@
+name: depot_thermion
+description: Spike 3D Tahap 2a — depot dengan Thermion (Filament), cadangan bila flutter_scene bermasalah.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  thermion_flutter: ^0.5.0
+  spike_common:
+    path: ../spike_common
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

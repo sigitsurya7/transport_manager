@@ -58,13 +58,13 @@ Kondisi ekosistem per Oktober 2026 (dicek ulang saat keputusan dibuat):
 
 | Opsi | Versi terbaru | Kelebihan | Kekurangan |
 |---|---|---|---|
-| **flutter_scene** (di atas Flutter GPU / Impeller) | 0.24.x | Paling baru dan paling "native Flutter"; glTF/GLB, PBR + IBL, skinned animation, **instancing dan LOD otomatis** bawaan; Impeller sudah default di Android | Pre-1.0, minor release bisa breaking; **butuh Flutter channel master** karena Flutter GPU belum masuk stable |
+| **flutter_scene** (di atas Flutter GPU / Impeller) | 0.24.x | Paling baru dan paling "native Flutter"; glTF/GLB, PBR + IBL, skinned animation, **instancing dan LOD otomatis** bawaan; Impeller sudah default di Android | Pre-1.0, minor release bisa breaking; butuh **Flutter 3.47 stable atau lebih baru** dan flag Flutter GPU di AndroidManifest |
 | **Thermion** (binding Flutter untuk Google Filament) | 0.5.0 (Agustus 2026) | Renderer Filament yang matang, berjalan di **Flutter stable**, Android/iOS arm64 | Binding pihak ketiga, ukuran APK lebih besar, collision masih eksperimental |
 | Flame (2.5D isometrik) | — | Stabil dan ringan | Bukan 3D sejati |
 
 **Keputusan (disetujui 2026-10-31): gunakan yang terbaik dan terbaru.**
 
-1. **Primer: `flutter_scene`** dengan Flutter master yang **dipin ke satu commit** (via FVM, `.fvmrc` di repo) agar build reproducible. Upgrade Flutter/flutter_scene dilakukan sengaja, bukan otomatis.
+1. **Primer: `flutter_scene`** dengan Flutter **3.47.x stable** yang dipin via FVM (`.fvmrc` di repo) agar build reproducible. *(Diperbarui 2026-10-31: dokumentasi flutter_scene 0.24.2 tidak lagi mewajibkan channel master.)* Upgrade Flutter/flutter_scene dilakukan sengaja, bukan otomatis.
 2. **Fallback: Thermion** di Flutter stable, dipakai jika spike menunjukkan flutter_scene bermasalah (crash GPU tertentu, performa < 30 fps di HP menengah, atau breaking change yang menghambat).
 3. Keduanya mengimplementasikan interface yang sama `DepotSceneRenderer`, yang hanya membaca `DepotSnapshot` (state hasil simulasi). Renderer **tidak pernah** menulis state.
 
@@ -312,7 +312,6 @@ Saat **dibuka:**
 | Toko ke toko / distribusi retail | Dalam kota saja (jarak dekat) | Pikap losbak / pikap box |
 | Distribusi kawasan | Dalam kota sampai pinggiran / kota tetangga dekat | Pikap box atau mini truck |
 | Antarkota | Keluar kota, mis. Jakarta → Bandung | **Mini truck ke atas** (light truck, medium, dst.) |
-| Antarprovinsi / jarak jauh | Lintas beberapa ibu kota | Light/medium truck ke atas; heavy & trailer di late game |
 
 Aturan ini dipaksakan di sisi kontrak: kontrak antarkota tidak bisa di-dispatch dengan pikap, dan papan kontrak menampilkan kelas kendaraan minimal. Batasnya data-driven (`contract_tiers.json`: radius kota, kelas minimal), bukan hardcode.
 
@@ -359,7 +358,7 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 
 | # | Topik | Keputusan |
 |---|---|---|
-| 1 | Engine 3D | Terbaik & terbaru: **flutter_scene** (Flutter master dipin via FVM), fallback **Thermion**; diverifikasi lewat spike 2a |
+| 1 | Engine 3D | Terbaik & terbaru: **flutter_scene** (Flutter 3.47.x stable dipin via FVM), fallback **Thermion**; diverifikasi lewat spike 2a |
 | 2 | Kota awal | Dipilih pemain; tersedia 6 ibu kota provinsi Jawa: Jakarta, Serang, Bandung, Semarang, Yogyakarta, Surabaya |
 | 3 | Skala waktu | **1 menit nyata = 10 menit game** (`timeScale = 10`); catch-up offline maks **48 jam nyata** |
 | 6 | Rute | Pemain memilih rute **tol atau non-tol** per dispatch |

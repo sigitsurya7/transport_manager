@@ -1,0 +1,21 @@
+name: depot_flutter_scene
+description: Spike 3D Tahap 2a — depot dengan flutter_scene (Flutter GPU / Impeller).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_scene: ^0.24.2
+  vector_math: ^2.1.4
+  spike_common:
+    path: ../spike_common
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

@@ -13,3 +13,14 @@ local.properties
 *.db-shm
 tools/map_pipeline/raw/
 *.osm.pbf
+
+# Spike: file hasil generate / flutter create
+spikes/*/assets/*.glb
+spikes/*/assets/depot_layout.json
+spikes/*/android/
+spikes/*/.metadata
+spikes/*/pubspec.lock
+tools/map_pipeline/out/
+tools/depot_glb/out/
+__pycache__/
+.fvm/

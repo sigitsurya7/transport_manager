@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Fixture kecil: dua rute dari A (1) ke C (3).
+  Tol   : 1 -> 2 -> 3 lewat motorway (lurus, cepat).
+  Non-tol: 1 -> 10 -> 11 -> 3 lewat primary (memutar).
+Node 2 adalah node tengah ruas tol (bukan persimpangan) -> jadi geometri.
+Way 300 residential hanya masuk bila opsi detail aktif.
+Way 400 oneway primary 11 -> 12.
+Node 99 berada di luar bbox uji.
+-->
+<osm version="0.6">
+  <node id="1" lat="-6.2000" lon="106.8000"/>
+  <node id="2" lat="-6.2000" lon="106.8500"/>
+  <node id="3" lat="-6.2000" lon="106.9000"/>
+  <node id="10" lat="-6.2300" lon="106.8000"/>
+  <node id="11" lat="-6.2300" lon="106.9000"/>
+  <node id="12" lat="-6.2500" lon="106.9000"/>
+  <node id="20" lat="-6.2100" lon="106.8500"/>
+  <node id="99" lat="-5.0000" lon="106.9000"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/>
+    <tag k="highway" v="motorway"/>
+    <tag k="toll" v="yes"/>
+    <tag k="maxspeed" v="100"/>
+  </way>
+  <way id="200">
+    <nd ref="1"/><nd ref="10"/><nd ref="11"/><nd ref="3"/>
+    <tag k="highway" v="primary"/>
+    <tag k="oneway" v="no"/>
+    <tag k="maxweight" v="20"/>
+  </way>
+  <way id="300">
+    <nd ref="10"/><nd ref="20"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="400">
+    <nd ref="11"/><nd ref="12"/>
+    <tag k="highway" v="primary"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="500">
+    <nd ref="12"/><nd ref="99"/>
+    <tag k="highway" v="secondary"/>
+  </way>
+  <way id="600">
+    <nd ref="3"/><nd ref="12"/>
+    <tag k="highway" v="footway"/>
+  </way>
+</osm>

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sim_core:
+    name: sim_core (Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sim_core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart analyze
+      - run: dart test
+      - name: Benchmark routing pada graph fixture
+        run: dart run bin/route_bench.dart test/fixtures/mini_graph.json --pairs 50
+
+  tools:
+    name: tools (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tools/map_pipeline/tests -v
+      - run: python -m unittest discover -s tools/depot_glb -p "test_*.py" -v
+
+  spikes:
+    name: spikes (flutter analyze, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [spike_common, depot_flutter_scene, depot_thermion]
+    defaults:
+      run:
+        working-directory: spikes/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.1
+      - run: flutter pub get
+      - run: flutter analyze
+      - if: matrix.app == 'spike_common'
+        run: flutter test

@@ -1,0 +1,16 @@
+name: spike_common
+description: Kode bersama spike 3D Tahap 2a (jalur kendaraan, statistik frame, HUD).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

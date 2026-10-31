@@ -1,0 +1,61 @@
+{
+  "_comment": "Kota awal yang bisa dipilih pemain (6 ibu kota provinsi di Pulau Jawa). Koordinat depot adalah perkiraan kawasan pergudangan/industri dan WAJIB diverifikasi lalu di-snap ke node jalan terdekat oleh pipeline sebelum dipakai di game.",
+  "country": {"id": "id", "name": "Indonesia"},
+  "region": {"id": "id-jawa", "name": "Jawa", "map_pack": "id-jawa"},
+  "cities": [
+    {
+      "id": "jakarta", "name": "Jakarta", "province": "DKI Jakarta",
+      "center": [-6.1754, 106.8272],
+      "radius_km": 25,
+      "depot_sites": [
+        {"id": "jakarta-cakung", "name": "Cakung", "approx": [-6.1700, 106.9330], "needs_verification": true},
+        {"id": "jakarta-sunter", "name": "Sunter", "approx": [-6.1370, 106.8690], "needs_verification": true}
+      ]
+    },
+    {
+      "id": "serang", "name": "Serang", "province": "Banten",
+      "center": [-6.1200, 106.1503],
+      "radius_km": 15,
+      "depot_sites": [
+        {"id": "serang-cikande", "name": "Cikande", "approx": [-6.1950, 106.3450], "needs_verification": true},
+        {"id": "serang-kota", "name": "Serang Kota", "approx": [-6.1300, 106.1700], "needs_verification": true}
+      ]
+    },
+    {
+      "id": "bandung", "name": "Bandung", "province": "Jawa Barat",
+      "center": [-6.9175, 107.6191],
+      "radius_km": 15,
+      "depot_sites": [
+        {"id": "bandung-gedebage", "name": "Gedebage", "approx": [-6.9530, 107.6900], "needs_verification": true},
+        {"id": "bandung-margahayu", "name": "Margahayu", "approx": [-6.9450, 107.6150], "needs_verification": true}
+      ]
+    },
+    {
+      "id": "semarang", "name": "Semarang", "province": "Jawa Tengah",
+      "center": [-6.9667, 110.4167],
+      "radius_km": 15,
+      "depot_sites": [
+        {"id": "semarang-terboyo", "name": "Terboyo", "approx": [-6.9550, 110.4750], "needs_verification": true},
+        {"id": "semarang-candi", "name": "Candi", "approx": [-7.0030, 110.3550], "needs_verification": true}
+      ]
+    },
+    {
+      "id": "yogyakarta", "name": "Yogyakarta", "province": "DI Yogyakarta",
+      "center": [-7.7956, 110.3695],
+      "radius_km": 12,
+      "depot_sites": [
+        {"id": "yogyakarta-gamping", "name": "Gamping", "approx": [-7.7900, 110.3300], "needs_verification": true},
+        {"id": "yogyakarta-banguntapan", "name": "Banguntapan", "approx": [-7.8200, 110.4000], "needs_verification": true}
+      ]
+    },
+    {
+      "id": "surabaya", "name": "Surabaya", "province": "Jawa Timur",
+      "center": [-7.2575, 112.7521],
+      "radius_km": 20,
+      "depot_sites": [
+        {"id": "surabaya-rungkut", "name": "Rungkut", "approx": [-7.3250, 112.7600], "needs_verification": true},
+        {"id": "surabaya-margomulyo", "name": "Margomulyo", "approx": [-7.2400, 112.6800], "needs_verification": true}
+      ]
+    }
+  ]
+}

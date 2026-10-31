@@ -1,0 +1,9 @@
+{
+  "_comment": "Jangkauan pengiriman per kelas kendaraan. Kelas: pickup_open, pickup_box, mini_truck, light_truck, medium_truck, heavy_rigid, tractor_head.",
+  "store_to_store_max_km": 15,
+  "tiers": [
+    {"scope": "store_to_store", "label": "Toko ke toko (dalam kota, jarak dekat)", "min_vehicle_class": "pickup_open"},
+    {"scope": "district", "label": "Distribusi kawasan (dalam kota sampai pinggiran)", "min_vehicle_class": "pickup_box"},
+    {"scope": "intercity", "label": "Antarkota", "min_vehicle_class": "mini_truck"}
+  ]
+}
