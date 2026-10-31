@@ -1,0 +1,15 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+android/.gradle/
+local.properties
+*.db
+*.db-wal
+*.db-shm
+tools/map_pipeline/raw/
+*.osm.pbf
