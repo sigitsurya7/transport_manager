@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 2a — flutter_scene terukur di HP dan lolos; Thermion & benchmark routing data nyata tertunda.** Tahap 1 selesai dan disetujui.
+**Tahap 2b — core prototype dapat dimainkan (APK siap), menunggu uji di HP.** Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -80,8 +80,26 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Save/load seluruh state + antrean event ke JSON.
 - [x] 15 test baru (total **51 lulus**): hasil akhir persis sama dengan estimasi, semua fase dilewati berurutan, posisi depot → tujuan, aturan dispatch, tol lebih cepat tetapi berbayar, penalti telat, satu lompatan panjang == banyak langkah pendek, save di tengah jalan → load → hasil akhir identik.
 
+### 2026-10-31 — Tahap 2b (bagian 2): save slot & aplikasi
+
+- [x] **Keputusan**: flutter_scene final; visual low-poly bergaya yang ringan (lihat keputusan #9–13 di dokumen arsitektur).
+- [x] `packages/persistence`: `SaveStore` (satu file SQLite per slot, tulis atomik, daftar/hapus slot, backup maks 3, migrasi berversi, tolak save dari versi lebih baru). 7 test lulus.
+- [x] `app/` (Flutter 3.47.9, Riverpod):
+  - Menu utama: permainan baru, lanjutkan (daftar save), hapus save.
+  - Permainan baru: negara → wilayah → kota → lokasi depot → nama perusahaan. Wilayah/kota tanpa paket peta tampil terkunci.
+  - **Depot 3D** (flutter_scene): matahari + bayangan; kendaraan bergerak sesuai fase trip (slot → dock → mundur keluar → gerbang; masuk → mundur ke slot); pekerja bongkar muat saat loading; kamera orbit/zoom.
+  - **Peta**: jalan nyata dari map pack (vektor, LOD per kelas jalan), rute pergi/pulang, depot, tujuan, kendaraan bergerak mengikuti geometri jalan; mode ikuti kendaraan.
+  - **Kontrak**: 3 tawaran, lembar dispatch dengan perbandingan tol vs non-tol (ETA, tenggat, BBM, tol, untung), status trip berjalan.
+  - **Keuangan**: kas, pendapatan/biaya, buku besar.
+  - Jam game berjalan (1 menit nyata = 10 menit game), **autosave** (setiap kejadian, tiap 60 detik nyata, saat app ke background, saat keluar), **catch-up offline** dengan jam monotonic Android (anti-manipulasi jam) + ringkasan "Selama kamu pergi".
+  - 12 test app (format, jalur depot, integrasi: game baru Bandung → pengiriman penuh → save → load). Bug ditemukan & diperbaiki: save yang tumpang tindih bisa membuang state terbaru.
+- [x] Model 3D baru: depot 2.952 segitiga (gudang beratap pelana, pos jaga, palang gerbang, jalan umum bermarka, pohon, lampu, rumah tetangga), pikap 468, pekerja 184; total aset ±250 KB. Test winding per segitiga & anggaran segitiga.
+- [x] APK release arm64: **23,6 MB**.
+- [ ] Belum diuji di HP: pemasangan via USB dibatalkan oleh HP (perlu konfirmasi di layar / opsi "Install via USB").
+- [ ] Map pack baru Bandung (dari ubin Overpass, jalan utama). Kota lain menunggu ekstrak Jawa (unduhan dilanjutkan di latar belakang).
+
 ## Berikutnya
 
-- [ ] Keputusan engine final (rekomendasi: flutter_scene).
-- [ ] Verifikasi koordinat kandidat depot.
-- [ ] Tahap 2b bagian 2: `packages/persistence` (Drift, satu file per save slot, autosave), lalu `app/` (New Game → pilih kota & depot → depot 3D → kontrak → dispatch → peta rute).
+- [ ] Pasang APK di HP, cek visual & performa depot 3D dan peta, perbaiki temuan.
+- [ ] Bangun map pack 6 kota dari ekstrak Jawa (termasuk jalan residential) & verifikasi koordinat depot.
+- [ ] Setelah itu: **Tahap 3 — depot simulation** (antrean gerbang/dock, pekerja, upgrade fasilitas + visual).

@@ -367,6 +367,16 @@ Kendaraan referensi memakai **nama generik** (bukan merek dagang), dengan spesif
 | 4 | Repo | Monorepo `app/` + `packages/` + `tools/` |
 | 5 | State management | Riverpod |
 
+### Keputusan Tahap 2 (2026-10-31)
+
+| # | Topik | Keputusan |
+|---|---|---|
+| 9 | Engine 3D final | **flutter_scene**. Terukur di REDMI Note 15 (Helio G99): 60–89 fps, jank ≈ 0 %. Thermion tidak dilanjutkan. |
+| 10 | Arah visual | Low-poly bergaya: warna flat rapi + pencahayaan matahari dengan bayangan, tanpa tekstur. Aset dibuat oleh `tools/depot_glb/make_depot_glb.py` dengan anggaran segitiga yang diuji (depot ≤ 8.000, pikap ≤ 800). |
+| 11 | Save slot | **SQLite langsung (`package:sqlite3`)**, bukan Drift: satu file per slot berisi `save_meta` + dokumen JSON `SimWorld`. Skemanya kecil sehingga code generation Drift tidak sepadan. Migrasi lewat `PRAGMA user_version`, file dicadangkan sebelum migrasi. Tabel ternormalisasi bisa ditambah di Tahap 4 bila laporan butuh query. |
+| 12 | Waktu tempuh | `TravelTimeModel` pluggable; default sementara = estimasi A*. Logika yang lebih realistis menyusul dari user. |
+| 13 | Peta di app | Jalan digambar sebagai vektor dari graph map pack (CustomPainter, path di-cache); vector tiles MBTiles menyusul setelah ekstrak Jawa lengkap. |
+
 ### Dampak skala waktu terhadap desain
 
 Dengan `timeScale = 10`, waktu game berjalan 10× lebih cepat dari dunia nyata:

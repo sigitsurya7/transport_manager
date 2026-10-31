@@ -25,3 +25,9 @@ tools/depot_glb/out/
 __pycache__/
 .fvm/
 packages/*/pubspec.lock
+
+# App: aset hasil sinkronisasi (tools/sync_app_assets.sh)
+app/assets/content/
+app/assets/data/
+app/assets/models/
+app/assets/packs/

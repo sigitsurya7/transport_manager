@@ -457,9 +457,10 @@ class SimWorld {
 
   // ---------------------------------------------------------------- snapshot
 
-  /// Keadaan kendaraan pada waktu [at] (default: [now]). Posisi di jalan
-  /// dihitung dari rute & waktu, bukan disimpan per frame.
-  VehicleSnapshot vehicleSnapshot(int vehicleId, {int? at}) {
+  /// Keadaan kendaraan pada waktu [at] (default: [now]; boleh pecahan detik
+  /// untuk animasi halus di antara tick). Posisi di jalan dihitung dari rute &
+  /// waktu, bukan disimpan per frame.
+  VehicleSnapshot vehicleSnapshot(int vehicleId, {num? at}) {
     final vehicle = _vehicle(vehicleId);
     final trip = vehicle.tripId == null ? null : trips[vehicle.tripId];
     if (trip == null) {
@@ -493,6 +494,12 @@ class SimWorld {
       phaseProgress: progress,
       pose: pose,
     );
+  }
+
+  /// Polyline & pembagian waktu leg pergi/pulang sebuah trip (untuk peta).
+  RouteTrack trackFor(int tripId, {required bool outbound}) {
+    final trip = trips[tripId] ?? (throw ArgumentError.value(tripId, 'tripId'));
+    return _track(trip, _vehicle(trip.vehicleId), _contract(trip.contractId), outbound);
   }
 
   RouteTrack _track(Trip trip, Vehicle vehicle, Contract contract, bool outbound) =>

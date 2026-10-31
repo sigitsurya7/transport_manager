@@ -22,6 +22,21 @@ jobs:
       - name: Benchmark routing pada graph fixture
         run: dart run bin/route_bench.dart test/fixtures/mini_graph.json --pairs 50
 
+  persistence:
+    name: persistence (Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/persistence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart analyze
+      - run: dart test
+
   tools:
     name: tools (Python)
     runs-on: ubuntu-latest
@@ -30,8 +45,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install osmium
       - run: python -m unittest discover -s tools/map_pipeline/tests -v
       - run: python -m unittest discover -s tools/depot_glb -p "test_*.py" -v
+
+  app:
+    name: app (Flutter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      # Paket peta kota tidak di-commit; test integrasi yang butuh peta di-skip.
+      - run: bash tools/sync_app_assets.sh
+      - run: flutter pub get
+        working-directory: app
+      - run: flutter analyze
+        working-directory: app
+      - run: flutter test
+        working-directory: app
 
   spikes:
     name: spikes (flutter analyze, non-blocking)
@@ -40,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [spike_common, depot_flutter_scene, depot_thermion]
+        app: [spike_common, depot_flutter_scene]
     defaults:
       run:
         working-directory: spikes/${{ matrix.app }}

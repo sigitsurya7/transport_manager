@@ -60,3 +60,9 @@ Interpretasi yang dipakai: perjalanan nyata 2 jam = 12 menit waktu main, artinya
 > Jika masih lama skip saja pengantarannya atau mengukur waktu tempuhnya. Nanti ku carikan logic yang bagus. Sekarang kerjakan yang lain saja
 
 Interpretasi: benchmark routing dengan data nyata ditunda (unduhan Overpass dihentikan; ubin yang sudah lengkap disimpan). Logika estimasi waktu tempuh akan ditinjau ulang bersama user.
+
+## 2026-10-31 — Engine final & arah visual
+
+> Ya lanjutkan, gunakan saja model 3D yang mudah dan tidak terlalu rumit. Yang terpenting adalah hasil 3D dan rendernya terlihat bagus, siap di publish serta tidak berat sama sekali.
+
+Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Arah visual: low-poly bergaya, warna flat yang rapi + pencahayaan, jumlah segitiga kecil, tanpa tekstur besar.

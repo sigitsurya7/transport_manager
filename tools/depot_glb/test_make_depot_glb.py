@@ -62,9 +62,40 @@ class GlbTest(unittest.TestCase):
                     self.assertEqual(ia["count"] % 3, 0)
                     self.assertLess(prim["material"], len(doc["materials"]))
 
+    def test_triangles_face_their_normals(self):
+        """Winding setiap segitiga searah normal verteksnya (tidak ada sisi terbalik)."""
+        for name in ("depot", "pickup", "worker"):
+            doc, blob = read_glb(os.path.join(self.dir, f"{name}.glb"))
+            for prim in doc["meshes"][0]["primitives"]:
+                def floats(acc_id):
+                    acc = doc["accessors"][acc_id]
+                    bv = doc["bufferViews"][acc["bufferView"]]
+                    flat = struct.unpack_from(f"<{acc['count'] * 3}f", blob, bv["byteOffset"])
+                    return [flat[i:i + 3] for i in range(0, len(flat), 3)]
+                pos = floats(prim["attributes"]["POSITION"])
+                nrm = floats(prim["attributes"]["NORMAL"])
+                ia = doc["accessors"][prim["indices"]]
+                idx = struct.unpack_from(f"<{ia['count']}I", blob, doc["bufferViews"][ia["bufferView"]]["byteOffset"])
+                for t in range(0, len(idx), 3):
+                    a, b, c = (pos[i] for i in idx[t:t + 3])
+                    n = g.cross(g.sub(b, a), g.sub(c, a))
+                    if g.dot(n, n) < 1e-12:
+                        continue  # segitiga degenerate
+                    with self.subTest(name=name, tri=t // 3):
+                        self.assertGreater(g.dot(n, nrm[idx[t]]), 0)
+
+    def test_budget_segitiga(self):
+        """Aset harus tetap ringan untuk HP kelas menengah."""
+        budget = {"depot": 8000, "pickup": 800, "worker": 300}
+        for name, builder in (("depot", g.build_depot()), ("pickup", g.build_pickup()), ("worker", g.build_worker())):
+            tris = sum(len(p["idx"]) // 3 for p in builder.parts.values())
+            self.assertLessEqual(tris, budget[name], name)
+
     def test_layout(self):
         layout = json.load(open(os.path.join(self.dir, "depot_layout.json")))
         self.assertEqual(len(layout["parking_slots"]), 3)
+        for key in ("outside", "gate", "lane_z", "dock_stop", "loading_dock"):
+            self.assertIn(key, layout)
 
 
 if __name__ == "__main__":
