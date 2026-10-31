@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 2a — kode spike selesai, menunggu pengukuran di HP Android.** Tahap 1 selesai dan disetujui.
+**Tahap 2a — kode spike selesai dan lolos compile (analyze + test), menunggu pengukuran di HP Android.** Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -47,14 +47,20 @@ Selesai:
 - [x] **CI GitHub Actions**: `dart analyze` + `dart test` + benchmark fixture untuk sim_core, test Python, `flutter analyze` spike (non-blocking).
 - [x] Dokumen arsitektur: flutter_scene kini cukup Flutter **3.47 stable** (bukan master); tabel jangkauan pengiriman disederhanakan jadi 3 tingkat.
 
-Belum terverifikasi (keterbatasan workspace Claude: tidak ada akses pub.dev / Dart SDK / Geofabrik):
-- [ ] Kode Dart `sim_core` dan spike belum pernah di-compile di sini → diverifikasi oleh CI setelah push.
-- [ ] API Thermion 0.5.0 di `thermion_adapter.dart` kemungkinan perlu penyesuaian.
+### 2026-10-31 — Tahap 2a (verifikasi compile di komputer dev)
+
+- [x] `sim_core`: `dart analyze` bersih, **36 test lulus** (Dart 3.12).
+- [x] Flutter **3.47.9** dipasang via FVM (pin `.fvmrc` dinaikkan dari 3.47.1; Flutter global 3.44.8 tidak diubah). CI ikut 3.47.9.
+- [x] `spike_common`: analyze bersih (1 import berlebih dihapus), 3 test lulus.
+- [x] `depot_flutter_scene`: analyze tanpa error.
+- [x] `depot_thermion`: adapter ditulis ulang ke API Thermion 0.5.0 (`loadGltf`, `ThermionAsset.setTransform`, `getActiveCamera().lookAt`); analyze tanpa error.
+
+Kendala di komputer dev: Python 3 belum terpasang (pipeline peta & pembuat GLB), lisensi Android SDK belum diterima, tidak ada HP terhubung.
 
 ## Berikutnya — sisa Tahap 2a (butuh HP / komputer dev)
 
-- [ ] Cek hasil CI; perbaiki error compile bila ada.
-- [ ] Jalankan kedua spike di HP Android, isi tabel di `spikes/README.md`, putuskan engine final.
+- [ ] Pasang Python 3 (+ `pip install osmium`), terima lisensi: `flutter doctor --android-licenses`.
+- [ ] Jalankan `setup.sh` kedua spike (membuat `assets/*.glb`), jalankan di HP Android, isi tabel di `spikes/README.md`, putuskan engine final.
 - [ ] Jalankan `fetch_java.sh` + `build_spike_packs.sh`, lalu `route_bench.dart` untuk angka routing nyata (Jakarta–Bandung tol vs non-tol).
 - [ ] Verifikasi koordinat kandidat depot.
 - [ ] Setelah itu: **Tahap 2b — core prototype**.

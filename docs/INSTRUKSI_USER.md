@@ -40,3 +40,8 @@ Interpretasi yang dipakai: perjalanan nyata 2 jam = 12 menit waktu main, artinya
 ## 2026-10-31 11:19 — Tahap 2a
 
 > Lanjutkan tahap 2a, lalu push ke github
+
+## 2026-10-31 — Lanjutkan pengerjaan
+
+> Baca MANUAL_INSTRUCTION.md dan progress.md sebelum melanjutkan.
+> Jika sudah lanjutkan pengerjaan.

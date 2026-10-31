@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/scheduler.dart';
 
 /// Ringkasan benchmark.

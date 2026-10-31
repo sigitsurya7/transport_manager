@@ -36,9 +36,13 @@ Kriteria lolos: **≥ 30 fps rata-rata dan jank < 5 % pada 10 kendaraan** di HP 
 | flutter_scene | | | | | | | |
 | Thermion | | | | | | | |
 
-## Catatan kejujuran
+## Status verifikasi
 
-Kode spike ini **belum pernah di-compile** — workspace Claude tidak punya akses ke pub.dev maupun Flutter SDK. CI menjalankan `flutter analyze` pada keduanya (non-blocking) supaya ketidakcocokan API langsung kelihatan.
+Diverifikasi 2026-10-31 dengan Flutter **3.47.9** (FVM) di komputer dev Windows:
 
-- `depot_flutter_scene` mengikuti dokumentasi resmi flutter_scene 0.24.2 (`Scene`, `Node.fromGlbAsset`, `SceneView` + `cameraBuilder`, `node.position/rotation`). Parameter `target`/`fovRadiansY` pada `PerspectiveCamera` dan `scene.remove` perlu dicek bila analyzer protes.
-- `depot_thermion` mengikuti README Thermion yang lebih lama; API transform per-entity (`setPosition`, `setRotation`, `lookAt`, `destroyAsset`) kemungkinan berubah di 0.5.0. Semua pemanggilan dikumpulkan di `lib/thermion_adapter.dart` sehingga perbaikannya cukup di satu file.
+- `spike_common`: `flutter analyze` bersih, 3 test lulus.
+- `depot_flutter_scene` (flutter_scene 0.24.x): `flutter analyze` tanpa error; API sesuai dokumentasi.
+- `depot_thermion` (thermion 0.5.0): adapter ditulis ulang ke API 0.5.0 — `loadGltf('asset://…')`, `ThermionAsset.setTransform(Matrix4)`, `getActiveCamera().lookAt(...)`. `flutter analyze` tanpa error.
+- Satu-satunya warning: folder `assets/` belum ada — dibuat oleh `setup.sh` (butuh Python 3).
+
+Belum: build APK dan pengukuran fps di HP (tabel di atas).
