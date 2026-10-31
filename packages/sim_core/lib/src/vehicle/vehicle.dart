@@ -1,12 +1,18 @@
 import 'maintenance.dart';
+import 'vehicle_catalog.dart';
 import 'vehicle_class.dart';
 import 'vehicle_profile.dart';
 
-/// Spesifikasi model kendaraan dari katalog (`content/vehicle_models.json`).
+/// Model kendaraan jadi dari katalog (`content/vehicle_models.json`):
+/// sasis + bodi beserta angka operasional.
 class VehicleModel {
   const VehicleModel({
     required this.id,
     required this.name,
+    required this.category,
+    required this.subcategory,
+    required this.chassis,
+    required this.body,
     required this.vehicleClass,
     required this.maxSpeedKmh,
     required this.emptyWeightKg,
@@ -14,12 +20,21 @@ class VehicleModel {
     required this.tollGolongan,
     required this.fuelLPer100Km,
     required this.priceIdr,
+    required this.lengthM,
+    required this.widthM,
+    required this.heightM,
+    required this.unlock,
     required this.visual,
   });
 
-  factory VehicleModel.fromJson(Map<String, dynamic> j) => VehicleModel(
+  factory VehicleModel.fromJson(Map<String, dynamic> j, {required VehicleChassis chassis, required VehicleBody body}) =>
+      VehicleModel(
         id: j['id'] as String,
         name: j['name'] as String,
+        category: j['category'] as String,
+        subcategory: j['subcategory'] as String,
+        chassis: chassis,
+        body: body,
         vehicleClass: VehicleClass.parse(j['class'] as String),
         maxSpeedKmh: (j['max_speed_kmh'] as num).toInt(),
         emptyWeightKg: (j['empty_weight_kg'] as num).toInt(),
@@ -27,16 +42,22 @@ class VehicleModel {
         tollGolongan: (j['toll_golongan'] as num).toInt(),
         fuelLPer100Km: (j['fuel_l_per_100km'] as num).toDouble(),
         priceIdr: (j['price_idr'] as num).toInt(),
-        visual: j['visual'] as String,
+        lengthM: (j['length_m'] as num).toDouble(),
+        widthM: (j['width_m'] as num).toDouble(),
+        heightM: (j['height_m'] as num).toDouble(),
+        unlock: VehicleUnlock.fromJson(j['unlock'] as Map<String, dynamic>?),
+        // Model 3D bernama sama dengan id (dibuat tools/depot_glb).
+        visual: j['visual'] as String? ?? j['id'] as String,
       );
-
-  static Map<String, VehicleModel> catalogFromJson(Map<String, dynamic> json) => {
-        for (final m in json['models'] as List)
-          (m as Map<String, dynamic>)['id'] as String: VehicleModel.fromJson(m),
-      };
 
   final String id;
   final String name;
+
+  /// Id kategori dealer (pickup, van, mini_truck, …).
+  final String category;
+  final String subcategory;
+  final VehicleChassis chassis;
+  final VehicleBody body;
   final VehicleClass vehicleClass;
   final int maxSpeedKmh;
   final int emptyWeightKg;
@@ -44,9 +65,17 @@ class VehicleModel {
   final int tollGolongan;
   final double fuelLPer100Km;
   final int priceIdr;
+  final double lengthM;
+  final double widthM;
+  final double heightM;
+  final VehicleUnlock unlock;
 
-  /// Nama model 3D (GLB) untuk renderer.
+  /// Nama model 3D (GLB) & thumbnail untuk renderer.
   final String visual;
+
+  Set<String> get cargoKinds => body.cargoKinds;
+
+  bool canCarry(String cargoKind) => body.cargoKinds.contains(cargoKind);
 
   VehicleProfile profile({int cargoKg = 0}) => VehicleProfile(
         vehicleClass: vehicleClass,

@@ -18,6 +18,9 @@ enum DispatchProblem {
   /// Muatan melebihi kapasitas kendaraan.
   overCapacity,
 
+  /// Bodi kendaraan tidak sanggup mengangkut jenis barang ini (mis. barang beku tanpa box berpendingin).
+  cargoIncompatible,
+
   /// Tidak ada rute pergi atau pulang untuk kendaraan ini.
   noRoute,
 }

@@ -110,3 +110,9 @@ Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Ara
 > Hapus saja button kembali dan button keluar. ganti dengan button Pengaturan. Waktu upgrade sangat lama.
 >
 > Setelah itu lanjut ke tahap 4.
+
+## 2026-10-31 — Master task: perluasan katalog kendaraan & perombakan visual depot
+
+> (Instruksi panjang berbahasa Inggris, diringkas.) Audit dulu sebelum mengubah. Perluas katalog kendaraan di setiap kategori (pikap, van, truk mini, truk ringan, truk sedang, truk berat rigid, tractor head, kendaraan khusus) dengan model yang benar-benar berbeda bentuknya (bukan ganti warna). Data tiap kendaraan: id, nama, kategori/subkategori, harga, biaya operasi, kapasitas & jenis muatan, dimensi & tapak parkir, kecepatan, BBM, perawatan, syarat buka/tier, referensi model, bodi/trailer/kontainer yang kompatibel. Pisahkan sasis, bodi muatan, trailer, kontainer dengan data kompatibilitas eksplisit dan validasi. Tingkatkan kualitas visual depot (lantai, marka parkir, area muat, gudang, dock, gerbang, pagar, jalan, kantor, bengkel, pencahayaan, umpan balik slot terisi/kosong) dan props industri; upgrade fasilitas harus terlihat berubah sesuai data; pertahankan progres awal 3 slot. Pilih satu arah visual yang konsisten (low-poly bergaya atau voxel). Aset pihak ketiga boleh bila lisensinya diverifikasi & didokumentasikan; bila tidak, buat model orisinal lewat generator. Integrasikan dengan gameplay (beli, sopir, dispatch, parkir, muat, gerbang, rute, perawatan, save/load, offline). Dealer dengan navigasi kategori, thumbnail, perbandingan. Optimasi untuk HP. Tambah test (katalog, referensi aset, kompatibilitas, data upgrade). Laporan akhir lengkap.
+>
+> Jalankan saja semuanya langsung. sampai selesai.

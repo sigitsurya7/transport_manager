@@ -126,6 +126,8 @@ const _purchaseText = {
   PurchaseProblem.noFreeSlot: 'Parkir penuh',
   PurchaseProblem.insufficientCash: 'Kas tidak cukup',
   PurchaseProblem.unknownModel: 'Tidak tersedia',
+  PurchaseProblem.facilityLevelTooLow: 'Butuh upgrade parkir',
+  PurchaseProblem.needsTruckTerminal: 'Butuh terminal truk',
 };
 
 Future<void> _showBuySheet(BuildContext context, GameSession session) => showModalBottomSheet<void>(

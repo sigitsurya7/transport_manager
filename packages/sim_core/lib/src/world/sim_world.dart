@@ -150,7 +150,17 @@ class VehicleSnapshot {
 
 enum UpgradeProblem { maxLevel, constructionBusy, insufficientCash }
 
-enum PurchaseProblem { noFreeSlot, insufficientCash, unknownModel }
+enum PurchaseProblem {
+  noFreeSlot,
+  insufficientCash,
+  unknownModel,
+
+  /// Fasilitas depot belum mencapai level yang disyaratkan model.
+  facilityLevelTooLow,
+
+  /// Kendaraan terlalu panjang untuk depot kota; butuh terminal truk.
+  needsTruckTerminal,
+}
 
 enum HireProblem { officeFull, noCandidate }
 
@@ -465,6 +475,10 @@ class SimWorld {
     return [
       if (model == null) PurchaseProblem.unknownModel,
       if (_depot(depotId).firstFreeSlot == null) PurchaseProblem.noFreeSlot,
+      if (model != null && model.unlock.terminal) PurchaseProblem.needsTruckTerminal,
+      if (model?.unlock.facilityId case final f?
+          when _depot(depotId).level(FacilityType.parse(f)) < model!.unlock.level)
+        PurchaseProblem.facilityLevelTooLow,
       if (model != null && cashIdr < model.priceIdr) PurchaseProblem.insufficientCash,
     ];
   }
@@ -622,7 +636,14 @@ class SimWorld {
     final rng = DeterministicRng.derive(seed, id, 0);
     final origin = graph.node(depot.roadNode);
 
-    final cargoIds = content.cargoTypes.keys.toList()..sort();
+    // Hanya barang yang bisa diangkut armada depot ini.
+    final kinds = {
+      for (final v in vehicles.values)
+        if (v.depotId == depotId) ...v.model.cargoKinds,
+    };
+    final cargoIds = content.cargoTypes.values.where((c) => kinds.contains(c.kind)).map((c) => c.id).toList()
+      ..sort();
+    if (cargoIds.isEmpty) return null;
     final cargo = content.cargoTypes[cargoIds[rng.nextInt(cargoIds.length)]]!;
     final targetKg = capacityKg * (0.4 + 0.5 * rng.nextDouble());
     final units = math.max(1, targetKg ~/ cargo.unitWeightKg);
@@ -698,6 +719,7 @@ class SimWorld {
       if (!content.tierRules.canDispatch(contract.scope, vehicle.model.vehicleClass))
         DispatchProblem.vehicleClassTooSmall,
       if (contract.weightKg > vehicle.model.payloadKg) DispatchProblem.overCapacity,
+      if (!vehicle.model.canCarry(content.cargoTypes[contract.cargoId]!.kind)) DispatchProblem.cargoIncompatible,
     ];
     final viaToll = _quote(contract, vehicle, driver, RouteMode.toll);
     final nonToll = _quote(contract, vehicle, driver, RouteMode.nonToll);

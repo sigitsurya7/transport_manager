@@ -1,9 +1,15 @@
 {
-  "_comment": "Barang untuk kontrak awal (retail toko ke toko). Kategori, suhu, dan kedaluwarsa ditambah di Tahap 4.",
+  "_comment": "Barang kontrak. kind = jenis muatan (cargo_kinds di vehicle_models.json): hanya kendaraan dengan bodi yang sanggup yang bisa mengangkut. Tawaran kontrak hanya memakai jenis yang bisa dilayani armada depot.",
   "cargo": [
-    {"id": "air_galon", "name": "Air mineral galon", "unit": "galon", "unit_weight_kg": 19},
-    {"id": "beras_25", "name": "Beras karung 25 kg", "unit": "karung", "unit_weight_kg": 25},
-    {"id": "minyak_goreng", "name": "Minyak goreng (karton 12 L)", "unit": "karton", "unit_weight_kg": 12},
-    {"id": "mi_instan", "name": "Mi instan (dus)", "unit": "dus", "unit_weight_kg": 3}
+    {"id": "air_galon", "name": "Air mineral galon", "unit": "galon", "unit_weight_kg": 19, "kind": "general"},
+    {"id": "beras_25", "name": "Beras karung 25 kg", "unit": "karung", "unit_weight_kg": 25, "kind": "general"},
+    {"id": "minyak_goreng", "name": "Minyak goreng (karton 12 L)", "unit": "karton", "unit_weight_kg": 12, "kind": "general"},
+    {"id": "mi_instan", "name": "Mi instan (dus)", "unit": "dus", "unit_weight_kg": 3, "kind": "general"},
+    {"id": "frozen_food", "name": "Makanan beku (karton)", "unit": "karton", "unit_weight_kg": 10, "kind": "chilled"},
+    {"id": "semen_40", "name": "Semen sak 40 kg", "unit": "sak", "unit_weight_kg": 40, "kind": "construction"},
+    {"id": "pasir", "name": "Pasir curah", "unit": "m³", "unit_weight_kg": 1400, "kind": "bulk"},
+    {"id": "air_bersih", "name": "Air bersih curah (1.000 L)", "unit": "kL", "unit_weight_kg": 1000, "kind": "liquid"},
+    {"id": "mobil_unit", "name": "Mobil penumpang", "unit": "unit", "unit_weight_kg": 1150, "kind": "vehicle"},
+    {"id": "kayu_log", "name": "Kayu gelondong", "unit": "m³", "unit_weight_kg": 750, "kind": "timber"}
   ]
 }

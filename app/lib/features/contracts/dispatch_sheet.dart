@@ -24,6 +24,7 @@ const _problemText = {
   DispatchProblem.driverNeedsRest: 'Sopir mencapai batas jam mengemudi dan wajib istirahat.',
   DispatchProblem.vehicleClassTooSmall: 'Kendaraan terlalu kecil untuk jangkauan kontrak ini.',
   DispatchProblem.overCapacity: 'Muatan melebihi kapasitas kendaraan.',
+  DispatchProblem.cargoIncompatible: 'Bodi kendaraan tidak cocok untuk jenis barang ini.',
   DispatchProblem.noRoute: 'Tidak ada rute jalan ke tujuan untuk kendaraan ini.',
 };
 

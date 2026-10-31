@@ -106,11 +106,44 @@ class GlbTest(unittest.TestCase):
             self.assertIn(key, layout)
         for level in ("1", "2", "3"):
             self.assertEqual(len(layout["docks"][level]), len(g.DOCKS[int(level)]))
+        bodies = {b["id"]: b for b in g.CATALOG["bodies"]}
         for name in g.VEHICLES:
-            self.assertGreaterEqual(len(layout["vehicle_cargo"][name]), 4, name)
-            xmin = layout["vehicle_bounds"][name][0]
-            self.assertGreaterEqual(xmin, -2.7, f"{name}: bak terlalu panjang untuk posisi dock")
+            model = g._MODELS[name]
+            body = bodies[model["body"]]
+            if body["kind"] in g.vehicles.CARGO_BODIES:
+                self.assertGreaterEqual(len(layout["vehicle_cargo"][name]), 1, name)
+            else:
+                self.assertEqual(layout["vehicle_cargo"][name], [], name)
+            xmin, xmax, zmin, zmax = layout["vehicle_bounds"][name]
+            self.assertAlmostEqual(xmin, -2.7, places=2, msg=f"{name}: ujung belakang harus tepat di posisi dock")
+            # Muat di slot parkir 3,5 m & tidak menembus bengkel saat parkir.
+            self.assertLessEqual(zmax - zmin, 3.1, name)
+            self.assertLessEqual(xmax, 5.0, name)
 
+    def test_katalog_kendaraan(self):
+        """Dimensi di katalog = dimensi model 3D; semua model punya thumbnail; yang butuh terminal tanpa GLB."""
+        layout = json.load(open(os.path.join(self.dir, "depot_layout.json")))
+        names = set(g.models())
+        for model in g.CATALOG["models"]:
+            mid = model["id"]
+            length, width, height = layout["vehicle_dims"][mid]
+            self.assertAlmostEqual(model["length_m"], length, delta=0.02, msg=mid)
+            self.assertAlmostEqual(model["width_m"], width, delta=0.02, msg=mid)
+            self.assertAlmostEqual(model["height_m"], height, delta=0.02, msg=mid)
+            thumb = os.path.join(self.dir, "thumbs", f"{mid}.png")
+            self.assertTrue(os.path.getsize(thumb) > 1000, mid)
+            self.assertEqual(mid in names, g.vehicles.depot_capable(model), mid)
+            if mid in g.VEHICLES_WITH_DOORS:
+                self.assertIn(f"{mid}_open", names)
+
+    def test_model_berbeda_bukan_ganti_warna(self):
+        """Setiap model punya geometri berbeda (posisi verteks), bukan hanya material."""
+        shapes = {}
+        for model in g.CATALOG["models"]:
+            mesh = g.vehicles.build_vehicle(model, g.CATALOG)[0]
+            key = tuple(sorted(round(v[k], 2) for p in mesh.parts.values() for v in p["pos"][::7] for k in range(3)))
+            self.assertNotIn(key, shapes, f"{model['id']} identik dengan {shapes.get(key)}")
+            shapes[key] = model["id"]
 
 if __name__ == "__main__":
     unittest.main()

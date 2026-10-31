@@ -11,7 +11,7 @@ import 'package:transport_manager/features/depot/depot_paths.dart';
 void main() {
   final layout = DepotLayout.parse(File('assets/models/depot_layout.json').readAsStringSync());
   final motion = DepotMotion(layout);
-  const vehicles = ['pickup_open', 'box_car', 'mini_truck', 'engkel_truck', 'container_truck'];
+  final vehicles = ((layout.json['vehicle_bounds'] as Map).keys).cast<String>().toList();
   const slotsPerLevel = {1: 3, 2: 5, 3: 8};
   const samples = 120;
 
@@ -135,7 +135,7 @@ void main() {
   }
 
   test('penanda konstruksi tidak berada di jalur kendaraan', () {
-    final pickup = layout.vehicleBounds('box_car');
+    final pickup = layout.vehicleBounds('pickup_box_1t');
     final marker = layout.obstacles('construction').single;
     for (final type in FacilityType.values) {
       final a = layout.anchor(type);

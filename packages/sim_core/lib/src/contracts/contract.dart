@@ -9,6 +9,7 @@ class CargoType {
     required this.name,
     required this.unit,
     required this.unitWeightKg,
+    this.kind = 'general',
   });
 
   factory CargoType.fromJson(Map<String, dynamic> j) => CargoType(
@@ -16,6 +17,7 @@ class CargoType {
         name: j['name'] as String,
         unit: j['unit'] as String,
         unitWeightKg: (j['unit_weight_kg'] as num).toInt(),
+        kind: j['kind'] as String? ?? 'general',
       );
 
   static Map<String, CargoType> catalogFromJson(Map<String, dynamic> json) => {
@@ -27,6 +29,9 @@ class CargoType {
   final String name;
   final String unit;
   final int unitWeightKg;
+
+  /// Jenis muatan (`cargo_kinds` di katalog kendaraan): menentukan bodi yang sanggup mengangkut.
+  final String kind;
 }
 
 enum ContractStatus {

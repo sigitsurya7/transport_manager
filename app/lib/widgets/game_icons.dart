@@ -84,7 +84,14 @@ class VehicleIcon extends StatelessWidget {
   final double width;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(size: Size(width, width / 2), painter: VehiclePainter(visual));
+  Widget build(BuildContext context) => Image.asset(
+    'assets/models/thumbs/$visual.png',
+    width: width,
+    height: width / 2,
+    fit: BoxFit.contain,
+    // Thumbnail dirender generator dari model 3D yang sama; ikon gambar sebagai cadangan.
+    errorBuilder: (_, _, _) => CustomPaint(size: Size(width, width / 2), painter: VehiclePainter(visual)),
+  );
 }
 
 class VehiclePainter extends CustomPainter {

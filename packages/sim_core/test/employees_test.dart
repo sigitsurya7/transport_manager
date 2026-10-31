@@ -116,7 +116,8 @@ void main() {
       w.vehicles[vehicleId]!.condition[VehicleComponent.tires] = 0.2;
       final outside = w.maintenanceQuote(vehicleId, 'tires').durationS;
       w.hire(1, EmployeeRole.mechanic);
-      expect(w.maintenanceQuote(vehicleId, 'tires').durationS, outside, reason: 'bengkel luar: mekanik tidak berpengaruh');
+      expect(w.maintenanceQuote(vehicleId, 'tires').durationS, outside,
+          reason: 'bengkel luar: mekanik tidak berpengaruh');
       w.releaseStaff(1, EmployeeRole.mechanic);
       w.advanceTo(w.startUpgrade(1, FacilityType.workshop).finishAt);
       final none = w.maintenanceQuote(vehicleId, 'tires').durationS;
