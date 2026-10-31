@@ -11,14 +11,21 @@ const phaseLabel = {
   TripPhase.toDock: 'Menuju loading dock',
   TripPhase.loading: 'Memuat barang',
   TripPhase.toGate: 'Menuju gerbang',
+  TripPhase.toGateDirect: 'Keluar slot menuju gerbang',
   TripPhase.waitGateOut: 'Antre di gerbang',
   TripPhase.gateOut: 'Pemeriksaan gerbang keluar',
+  TripPhase.toPickup: 'Menuju supplier',
+  TripPhase.pickupLoading: 'Memuat barang di supplier',
   TripPhase.outbound: 'Dalam perjalanan ke tujuan',
   TripPhase.unloading: 'Bongkar di tujuan',
   TripPhase.inbound: 'Kembali ke depot',
   TripPhase.waitGateIn: 'Antre masuk depot',
   TripPhase.gateIn: 'Pemeriksaan gerbang masuk',
   TripPhase.toSlot: 'Menuju slot parkir',
+  TripPhase.waitDockIn: 'Antre dock untuk bongkar ke gudang',
+  TripPhase.toDockIn: 'Menuju loading dock',
+  TripPhase.unloadDock: 'Bongkar barang ke gudang',
+  TripPhase.dockToSlot: 'Kembali ke slot parkir',
   TripPhase.inspection: 'Pemeriksaan kendaraan',
   TripPhase.completed: 'Selesai',
 };
@@ -37,12 +44,10 @@ class TripCard extends StatelessWidget {
     final contract = world.contracts[trip.contractId]!;
     final vehicle = world.vehicles[trip.vehicleId]!;
     final snap = world.vehicleSnapshot(vehicle.id);
-    final phases = TripPhase.values.where((p) => p != TripPhase.completed && !p.waiting).toList();
+    final phases = trip.plan.where((p) => p != TripPhase.completed && !p.waiting).toList();
     final index = phases.indexOf(trip.phase);
     // Fase antrean: tampilkan progres fase sebelumnya yang sudah selesai.
-    final done = index >= 0
-        ? index + snap.phaseProgress
-        : phases.indexOf(TripPhase.values[trip.phase.index + 1]).toDouble();
+    final done = index >= 0 ? index + snap.phaseProgress : phases.indexOf(trip.next(trip.phase)).toDouble();
     final overall = done / phases.length;
     return Card(
       child: Padding(
@@ -81,7 +86,9 @@ class TripCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Tenggat ${formatGameTime(contract.deadline!, fromSimSeconds: world.now)}',
+                  contract.hasDeadline
+                      ? 'Tenggat ${formatGameTime(contract.deadline!, fromSimSeconds: world.now)}'
+                      : 'Isi stok gudang',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 const Spacer(),

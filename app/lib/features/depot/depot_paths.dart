@@ -191,8 +191,8 @@ class DepotMotion {
   FloorPoint _outQueueSpot(int q) => (x: _outQueueX + _outQueueGap * q, z: layout.laneZ);
   FloorPoint _inQueueSpot(int q) => (x: _inQueueX - _inQueueGap * q, z: layout.roadLaneZ);
 
-  /// [snap]: keadaan kendaraan; [dockLevel]/[gateLevel]: level fasilitas saat
-  /// ini; [outQueueAhead]: jumlah kendaraan yang sudah antre keluar (untuk
+  /// [snap]: keadaan kendaraan; [dockLevel]/[gateLevel]: **tier visual**
+  /// fasilitas saat ini (`SimWorld.tier`, kunci layout 1–3), bukan nomor level; [outQueueAhead]: jumlah kendaraan yang sudah antre keluar (untuk
   /// menentukan tempat berhenti kendaraan yang sedang menuju antrean);
   /// [front]: jarak origin ke ujung depan kendaraan. Kendaraan panjang
   /// berbelok lebih awal dan berhenti lebih jauh dari palang agar ujung
@@ -216,9 +216,22 @@ class DepotMotion {
     final p = snap.phaseProgress;
 
     switch (snap.phase) {
-      case null || TripPhase.completed || TripPhase.inspection || TripPhase.waitDock:
+      case null || TripPhase.completed || TripPhase.inspection || TripPhase.waitDock || TripPhase.waitDockIn:
         return parked(snap.slotIndex);
-      case TripPhase.toDock:
+      case TripPhase.toGateDirect:
+        // Tanpa muat di depot: mundur keluar slot, maju ke apron dock, mundur
+        // sedikit untuk berputar (tanpa masuk dock), lalu maju ke antrean gerbang.
+        final spot = _outQueueSpot(outQueueAhead);
+        return DepotPath(s, [
+          rv(s.x, lane - 1.5),
+          rv(s.x - 1.0, lane),
+          fw(math.min(dock.x + 1.8, 19.4 - front), lane),
+          rv(dock.x + 0.2, lane - 2.0),
+          rv(dock.x, lane - 3.5),
+          fw(dock.x, lane - 1.5 - 1.5 * extra),
+          fw(spot.x, spot.z),
+        ], startHeading: headingNorth).poseAt(p);
+      case TripPhase.toDock || TripPhase.toDockIn:
         // Mundur keluar slot, maju melewati dock, lalu mundur ke dock.
         return DepotPath(s, [
           rv(s.x, lane - 1.5),
@@ -231,8 +244,16 @@ class DepotMotion {
           rv(dock.x, lane - 3.5),
           rv(dock.x, dock.z),
         ], startHeading: headingNorth).poseAt(p);
-      case TripPhase.loading:
+      case TripPhase.loading || TripPhase.unloadDock:
         return (x: dock.x, z: dock.z, heading: headingSouth);
+      case TripPhase.dockToSlot:
+        // Keluar dock maju ke jalur, belok ke barat, lalu maju masuk slot.
+        final pts = <PathPoint>[fw(dock.x, lane - 1.5 - 1.5 * extra)];
+        if (s.x + 3.5 < dock.x - 1) pts.add(fw(s.x + 3.5, lane));
+        pts
+          ..add(fw(s.x, lane - 3.0))
+          ..add(fw(s.x, s.z));
+        return DepotPath(dock, pts, startHeading: headingSouth).poseAt(p);
       case TripPhase.toGate:
         final spot = _outQueueSpot(outQueueAhead);
         // Belok lebih awal bila panjang: moncong tidak menyapu area istirahat di utara jalur.
@@ -256,7 +277,11 @@ class DepotMotion {
         // Lurus melewati gerbang sampai bak lepas dari pilar, baru belok ke lajur kiri.
         final drive = DepotPath((x: gx, z: stop), [fw(gx, gz + 4.2), fw(gx + 4.0, road), fw(gx + 40, road)]);
         return _staged(approach, drive, p);
-      case TripPhase.outbound || TripPhase.unloading || TripPhase.inbound:
+      case TripPhase.toPickup ||
+          TripPhase.pickupLoading ||
+          TripPhase.outbound ||
+          TripPhase.unloading ||
+          TripPhase.inbound:
         return null;
       case TripPhase.waitGateIn:
         final spot = _inQueueSpot(snap.queuePosition ?? 0);

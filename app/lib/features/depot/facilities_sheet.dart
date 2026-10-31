@@ -20,15 +20,17 @@ Future<void> showFacilitiesSheet(BuildContext context, GameSession session) => s
 );
 
 /// Ringkasan statistik satu level dalam kalimat pendek.
+String _x(double v) => '×${v.toStringAsFixed(2).replaceAll('.', ',')}';
+
 String facilityStats(FacilityType type, FacilityLevel l) => switch (type) {
-  FacilityType.parking => '${l.intStat('slots')} slot parkir',
+  FacilityType.parking =>
+    '${l.intStat('slots')} slot parkir · jalur internal ${_x(l.stats['yard_speed']?.toDouble() ?? 1.0)}',
   FacilityType.gate => '${l.intStat('lanes')} jalur · lewat ${formatDuration(l.intStat('pass_s'))} per kendaraan',
-  FacilityType.loadingDock =>
-    '${l.intStat('docks')} dock · kecepatan muat ×${l.doubleStat('speed').toStringAsFixed(1).replaceAll('.', ',')}',
+  FacilityType.loadingDock => '${l.intStat('docks')} dock · kecepatan muat ${_x(l.doubleStat('speed'))}',
   FacilityType.workshop =>
     l.intStat('bays') == 0
-        ? 'Servis di bengkel luar · biaya ×${l.doubleStat('cost_factor').toStringAsFixed(1).replaceAll('.', ',')}'
-        : '${l.intStat('bays')} bay · kecepatan ×${l.doubleStat('speed').toStringAsFixed(1).replaceAll('.', ',')}',
+        ? 'Servis di bengkel luar · biaya ${_x(l.doubleStat('cost_factor'))} · kecepatan ${_x(l.doubleStat('speed'))}'
+        : '${l.intStat('bays')} bay · kecepatan ${_x(l.doubleStat('speed'))} · biaya ${_x(l.doubleStat('cost_factor'))}',
   FacilityType.warehouse => 'Kapasitas ${l.intStat('capacity_m3')} m³',
   FacilityType.office => 'Maks. ${l.intStat('staff_max')} karyawan',
 };
@@ -120,8 +122,9 @@ class _FacilityCard extends StatelessWidget {
                   const Icon(Icons.arrow_upward_rounded, size: 16, color: AppColors.positive),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(next.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text('Level ${level + 1}: ${next.label}', style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
+                  _UpgradeKind(changesLook: spec.changesLook(level + 1)),
                 ],
               ),
               const SizedBox(height: 2),
@@ -150,6 +153,27 @@ class _FacilityCard extends StatelessWidget {
   }
 }
 
+/// Jenis upgrade: hanya statistik, atau sekaligus mengganti tampilan.
+class _UpgradeKind extends StatelessWidget {
+  const _UpgradeKind({required this.changesLook});
+
+  final bool changesLook;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = changesLook ? AppColors.accent : AppColors.textMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+      child: Text(
+        changesLook ? 'Ganti tampilan' : 'Statistik',
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+/// "Lv 5/15" + bar kecil (15 titik terlalu lebar di layar HP).
 class _LevelDots extends StatelessWidget {
   const _LevelDots({required this.level, required this.max});
 
@@ -160,13 +184,20 @@ class _LevelDots extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      for (var i = 1; i <= max; i++)
-        Container(
-          width: 9,
-          height: 9,
-          margin: const EdgeInsets.only(left: 4),
-          decoration: BoxDecoration(shape: BoxShape.circle, color: i <= level ? AppColors.accent : AppColors.outline),
+      Text('Lv $level/$max', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+      const SizedBox(width: 6),
+      SizedBox(
+        width: 54,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: level / max,
+            minHeight: 6,
+            backgroundColor: AppColors.outline,
+            color: AppColors.accent,
+          ),
         ),
+      ),
     ],
   );
 }

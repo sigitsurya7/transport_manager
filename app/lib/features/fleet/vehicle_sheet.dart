@@ -19,6 +19,12 @@ Future<void> showVehicleSheet(BuildContext context, GameSession session, Vehicle
   ),
 );
 
+const _sellProblemText = {
+  SellProblem.vehicleBusy: 'Sedang bertugas / di bengkel',
+  SellProblem.inAgreement: 'Terikat kontrak berulang',
+  SellProblem.lastVehicle: 'Kendaraan terakhir',
+};
+
 const _problemText = {
   MaintenanceProblem.vehicleBusy: 'Kendaraan sedang bertugas / di bengkel',
   MaintenanceProblem.insufficientCash: 'Kas tidak cukup',
@@ -72,6 +78,8 @@ class _VehicleSheet extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _SaleRow(session: session, vehicle: vehicle),
           if (job != null) ...[const SizedBox(height: 14), _JobCard(session: session, job: job)],
           const SizedBox(height: 18),
           const Text(
@@ -140,6 +148,64 @@ class _VehicleSheet extends StatelessWidget {
       );
     },
   );
+}
+
+/// Tahun produksi, nilai pasar, dan tombol jual ke dealer.
+class _SaleRow extends StatelessWidget {
+  const _SaleRow({required this.session, required this.vehicle});
+
+  final GameSession session;
+  final Vehicle vehicle;
+
+  @override
+  Widget build(BuildContext context) {
+    final world = session.world;
+    if (!world.vehicles.containsKey(vehicle.id)) return const SizedBox.shrink();
+    final price = world.saleValueIdr(vehicle);
+    final problems = world.sellProblems(vehicle.id);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tahun ${vehicle.builtYear} · umur ${world.vehicleAgeYears(vehicle)} th · '
+                  'dibeli ${formatRupiahCompact(vehicle.purchasePriceIdr)}',
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+                Text('Nilai jual ke dealer ${formatRupiah(price)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          FilledButton.tonal(
+            onPressed: problems.isNotEmpty
+                ? null
+                : () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Jual ${vehicle.model.name}?'),
+                        content: Text('Dealer membayar ${formatRupiah(price)}. Slot parkirnya kosong kembali.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+                          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Jual')),
+                        ],
+                      ),
+                    );
+                    if (!(ok ?? false) || !context.mounted) return;
+                    session.sellVehicle(vehicle.id);
+                    Navigator.pop(context);
+                  },
+            child: Text(problems.isEmpty ? 'Jual' : _sellProblemText[problems.first]!),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ActionTile extends StatelessWidget {

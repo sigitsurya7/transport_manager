@@ -11,6 +11,7 @@ import '../../app/theme.dart';
 import '../../game/game_session.dart';
 import '../../util/format.dart';
 import '../contracts/trip_card.dart';
+import 'depot_ambient.dart';
 import 'depot_paths.dart';
 import 'facilities_sheet.dart';
 
@@ -92,6 +93,9 @@ class _DepotScreenState extends State<DepotScreen> {
 
   /// Sopir yang memuat sendiri bila belum ada staf gudang.
   (Node, Node)? _driverLoader;
+
+  /// Sopir yang sedang istirahat di gazebo (depot hidup).
+  final List<Node> _resting = [];
   Node? _guard;
   Node? _construction;
   final Map<String, Node> _templates = {};
@@ -192,7 +196,7 @@ class _DepotScreenState extends State<DepotScreen> {
         ..add(pair.$2);
       _slotMarkers.add(pair);
     }
-    final gateLevel = depot.level(FacilityType.gate);
+    final gateLevel = world.tier(depot, FacilityType.gate);
     if (_boomLevel != gateLevel) {
       for (final (_, n) in _booms) {
         _scene.remove(n);
@@ -230,6 +234,11 @@ class _DepotScreenState extends State<DepotScreen> {
     }
 
     _driverLoader ??= await pair();
+    while (_resting.length < DepotAmbient.restSpots.length) {
+      final node = await _instance('worker');
+      _resting.add(node);
+      _scene.add(node);
+    }
     while (_mechanics.length < world.vehicles.length) {
       final node = await _instance('worker');
       _mechanics.add(node);
@@ -276,8 +285,9 @@ class _DepotScreenState extends State<DepotScreen> {
     if (motion != null) {
       final world = session.world;
       final t = session.displayTime;
-      final dockLevel = depot.level(FacilityType.loadingDock);
-      final gateLevel = depot.level(FacilityType.gate);
+      // Layout memakai tier visual (level statistik saja tidak mengubah tata letak).
+      final dockLevel = world.tier(depot, FacilityType.loadingDock);
+      final gateLevel = world.tier(depot, FacilityType.gate);
       final snaps = [for (final v in world.vehicles.values) world.vehicleSnapshot(v.id, at: t)];
       final outQueue = snaps.where((s) => s.phase == TripPhase.waitGateOut).length;
       final boomOpen = <int, double>{};
@@ -298,13 +308,22 @@ class _DepotScreenState extends State<DepotScreen> {
           final lane = snap.gateLane ?? 0;
           boomOpen[lane] = math.max(boomOpen[lane] ?? 0, boomOpenAt(snap.phaseProgress));
         }
-        if (snap.phase == TripPhase.loading) loadingDocks.add(snap.dock ?? 0);
+        if (snap.phase == TripPhase.loading || snap.phase == TripPhase.unloadDock) loadingDocks.add(snap.dock ?? 0);
       }
       _animateBooms(boomOpen);
       _placeStaging(snaps, motion.layout.docks(dockLevel));
-      _placeMechanics(motion, snaps, elapsed.inMicroseconds / 1e6);
+      final seconds = elapsed.inMicroseconds / 1e6;
+      final workHour = DepotAmbient.isWorkHour(t.floor(), dayStartOffset: SimWorld.dayStartOffset);
+      _placeMechanics(motion, snaps, seconds, workHour: workHour);
       _placeSlotMarkers(motion);
-      _animatePeople(motion, elapsed.inMicroseconds / 1e6, dockLevel, gateLevel, loadingDocks);
+      final gateBusy = snaps.any((s) => const {
+            TripPhase.waitGateOut,
+            TripPhase.gateOut,
+            TripPhase.waitGateIn,
+            TripPhase.gateIn,
+          }.contains(s.phase));
+      _animatePeople(motion, seconds, dockLevel, gateLevel, loadingDocks, workHour: workHour, gateBusy: gateBusy);
+      _placeResting(seconds, workHour: workHour);
     }
     return PerspectiveCamera(
       position: _camera.position,
@@ -316,7 +335,7 @@ class _DepotScreenState extends State<DepotScreen> {
   /// Kendaraan + muatannya. Kosong saat berangkat ke dock & saat pulang;
   /// terisi bertahap selama dimuat (pintu box terbuka); penuh sampai keluar.
   void _placeVehicle(_VehicleView view, VehicleSnapshot snap, FloorPose? pose) {
-    final loading = snap.phase == TripPhase.loading;
+    final loading = snap.phase == TripPhase.loading || snap.phase == TripPhase.unloadDock;
     final showOpen = loading && view.open != null;
     _place(view.closed, showOpen ? null : pose);
     if (view.open != null) _place(view.open!, showOpen ? pose : null);
@@ -344,9 +363,15 @@ class _DepotScreenState extends State<DepotScreen> {
     final weight = world.contracts[trip.contractId]!.weightKg;
     final share = (weight / vehicle.model.payloadKg).clamp(0.2, 1.0);
     final full = math.max(1, (view.crates.length * share).ceil());
+    // Muat di depot hanya bila barang dari gudang; isi stok pulang membawa barang.
+    final loadedAtDepot = trip.has(TripPhase.loading);
+    final bringsStock = trip.has(TripPhase.unloadDock);
     final fill = switch (snap.phase) {
       TripPhase.loading => snap.phaseProgress,
-      TripPhase.toGate || TripPhase.waitGateOut || TripPhase.gateOut => 1.0,
+      TripPhase.toGate || TripPhase.waitGateOut || TripPhase.gateOut => loadedAtDepot ? 1.0 : 0.0,
+      TripPhase.waitGateIn || TripPhase.gateIn || TripPhase.toSlot || TripPhase.waitDockIn || TripPhase.toDockIn =>
+        bringsStock ? 1.0 : 0.0,
+      TripPhase.unloadDock => 1 - snap.phaseProgress,
       _ => 0.0,
     };
     return (full: full, loaded: (full * fill).ceil().clamp(0, full));
@@ -392,13 +417,19 @@ class _DepotScreenState extends State<DepotScreen> {
   }
 
   /// Kendaraan di bengkel tetap di slotnya; mekanik bekerja di sisi kabin.
-  void _placeMechanics(DepotMotion motion, List<VehicleSnapshot> snaps, double seconds) {
+  void _placeMechanics(DepotMotion motion, List<VehicleSnapshot> snaps, double seconds, {required bool workHour}) {
     var used = 0;
     for (final snap in snaps.where((s) => s.inWorkshop)) {
       if (used >= _mechanics.length) break;
       final slot = motion.layout.slots[snap.slotIndex];
       final sway = 0.25 * math.sin(seconds * 1.7 + used);
       _place(_mechanics[used++], (x: slot.x + 1.55, z: slot.z - 1.6 + sway, heading: math.pi));
+    }
+    // Mekanik yang tidak sedang menservis siaga di depan bengkel (jam kerja).
+    final idle = session.world.workshopBays(depot) == 0 || !workHour ? 0 : math.max(0, depot.mechanics - used);
+    for (var k = 0; k < idle && k < DepotAmbient.mechanicSpots.length && used < _mechanics.length; k++) {
+      final spot = DepotAmbient.mechanicSpots[k];
+      _place(_mechanics[used++], (x: spot.x, z: spot.z, heading: headingSouth + 0.5 * math.sin(seconds * 0.35 + k)));
     }
     for (var i = used; i < _mechanics.length; i++) {
       _place(_mechanics[i], null);
@@ -417,7 +448,31 @@ class _DepotScreenState extends State<DepotScreen> {
   /// dari pintu gudang ke bak kendaraan memanggul kardus, lalu kembali dengan
   /// tangan kosong. Staf yang tidak bekerja siaga di tepi dock. Petugas jaga
   /// berdiri di pos gerbang.
-  void _animatePeople(DepotMotion motion, double seconds, int dockLevel, int gateLevel, List<int> loadingDocks) {
+  /// Sopir yang tidak bertugas beristirahat di gazebo selama jam kerja.
+  void _placeResting(double seconds, {required bool workHour}) {
+    final resting = workHour
+        ? session.world.drivers.values.where((d) => d.depotId == depot.id && d.isAvailable).length
+        : 0;
+    for (final (i, node) in _resting.indexed) {
+      if (i >= resting) {
+        _place(node, null);
+        continue;
+      }
+      final spot = DepotAmbient.restSpots[i];
+      final facing = spot.x < 12 ? math.pi : 0.0;
+      _place(node, (x: spot.x, z: spot.z, heading: facing + 0.35 * math.sin(seconds * 0.25 + i * 1.3)));
+    }
+  }
+
+  void _animatePeople(
+    DepotMotion motion,
+    double seconds,
+    int dockLevel,
+    int gateLevel,
+    List<int> loadingDocks, {
+    required bool workHour,
+    required bool gateBusy,
+  }) {
     final docks = motion.layout.docks(dockLevel);
     const platformY = 1.1, doorZ = -5.05, edgeZ = -3.2;
     final loaders = _staff.isNotEmpty ? _staff : [?_driverLoader];
@@ -428,7 +483,15 @@ class _DepotScreenState extends State<DepotScreen> {
     for (final (i, (empty, carry)) in loaders.indexed) {
       if (loadingDocks.isEmpty) {
         _place(carry, null);
-        if (identical(loaders, _staff)) {
+        if (identical(loaders, _staff) && !workHour) {
+          // Di luar jam kerja staf gudang pulang.
+          _place(empty, null);
+        } else if (identical(loaders, _staff) && depot.stock.isNotEmpty) {
+          // Ada stok: staf merapikan barang di platform dock.
+          final job = DepotAmbient.stockKeeper(i, seconds, docks[i % docks.length]);
+          _place(job.carrying ? carry : empty, job.pose, y: platformY);
+          _place(job.carrying ? empty : carry, null);
+        } else if (identical(loaders, _staff)) {
           final dock = docks[i % docks.length];
           _place(empty, (
             x: dock.x - 1.4 + (i ~/ docks.length) * 0.7,
@@ -455,8 +518,13 @@ class _DepotScreenState extends State<DepotScreen> {
     }
     final guard = _guard;
     if (guard != null) {
-      final booth = gateLevel == 1 ? (x: 5.0, z: 13.6) : (x: 5.2, z: 13.4);
-      _place(guard, (x: booth.x, z: booth.z, heading: math.pi + 0.4 * math.sin(seconds * 0.3)));
+      if (gateBusy) {
+        // Ada kendaraan di gerbang: satpam di pos jaga.
+        final booth = gateLevel == 1 ? (x: 5.0, z: 13.6) : (x: 5.2, z: 13.4);
+        _place(guard, (x: booth.x, z: booth.z, heading: math.pi + 0.4 * math.sin(seconds * 0.3)));
+      } else {
+        _place(guard, DepotAmbient.guardPatrol(seconds));
+      }
     }
   }
 

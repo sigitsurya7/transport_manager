@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 4 — business simulation berjalan** (rencana: `docs/TAHAP_4_RENCANA.md`). 4.1 perawatan kendaraan dan 4.2 karyawan selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
+**Revisi Tahap 4 (masukan user 31-10 22:57): kode selesai, BELUM di-compile/diuji.** Workspace Claude tidak punya Dart/Flutter SDK. Langkah pertama sesi berikutnya ada di bagian *Resume* di bawah.
 
 ## Log
 
@@ -172,6 +172,51 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Perombakan visual depot: panel lantai, marka, polisi tidur, pagar BRC, dock seal & bollard, rusuk gudang & talang & skylight, kantor 1–3 lantai, papan nama, props keselamatan, dan lampu lantai slot (hijau kosong / oranye terisi). Tetap mulai dari 3 slot.
 - [x] Test: sim_core 94, generator 8, app 47 lulus; `flutter analyze` bersih. Diuji di HP: depot baru, dealer (kartu & tabel), pembelian truk sedang flatbed lalu parkir di slot 5.
 - Detail & cara menambah kendaraan: `docs/KATALOG_KENDARAAN.md`.
+
+### 2026-10-31 — Revisi Tahap 4: alur kontrak, gudang, jual-beli armada, level 15, depot hidup
+
+Desain: `docs/TAHAP_4_REVISI.md`. Commit `Revisi Tahap 4 (sim_core)…` dan `Revisi Tahap 4 (app)…`.
+
+**sim_core**
+- [x] **Jasa angkut** (`ContractKind.haul`): depot → supplier A (muat) → toko B (bongkar) → depot. Tidak ada muat di dock depot.
+- [x] **Kontrak berulang** (`Agreement`): tiap 1/2/3/7 hari, 4–12 pengiriman, kendaraan tetap, sopir utama atau sopir siap lain. Kalau belum siap: dicoba ulang tiap 30 menit sampai 3 jam, lewat itu dihitung terlewat. 3× terlewat → putus. Pemain bisa memutus kontrak dengan denda 1 pengiriman.
+- [x] **Supplier** per kota (`content/suppliers.json`, 8 template, termasuk "Gudang Beras Mang Engking"). Lokasinya di jalan nyata 2–12 km dari depot, deterministik, dan save lama dibuatkan otomatis.
+- [x] **Gudang**: stok per depot, kapasitas m³ dari level gudang. Barang punya harga, volume, dan status bisa disimpan (`cargo_types.json`).
+- [x] **Pesanan toko** (`storeOrder`): ambil stok sebanyak mungkin, sisanya dibeli di supplier (modal keluar). Toko membayar barang (+15%) + ongkos kirim. Penalti telat hanya memotong ongkos kirim.
+- [x] **Isi stok** (`restock`): depot → supplier (harga grosir −8%) → bongkar di dock ke gudang. Volume yang sedang dalam perjalanan dihitung, jadi gudang tidak bisa kelebihan isi.
+- [x] Trip menyimpan **rencana fase** (`TripPlans`). Fase baru: `toGateDirect`, `toPickup`, `pickupLoading`, `waitDockIn`, `toDockIn`, `unloadDock`, `dockToSlot`. Tol dibayar saat masuk tiap leg. Keausan dihitung per leg sesuai muatan.
+- [x] **Jual-beli armada**: tahun produksi & harga beli disimpan. Nilai pasar dari umur, odometer, dan kondisi (lantai 10%). Dealer membeli 85% nilai pasar. Kendaraan bertugas, terikat kontrak berulang, atau kendaraan terakhir tidak bisa dijual. **Pasar bekas**: 4 penawaran per hari (umur 1–12 th, 20–60 rb km/th, kondisi acak, harga 110% nilai pasar).
+- [x] **Fasilitas 15 level** dengan `tier` visual: L1–3 / L4–7 / L8–15. Level di antaranya hanya menaikkan statistik. Stat baru parkir `yard_speed` (jalur internal). **Save format 3**: level lama 1/2/3 → 1/4/8. Syarat kendaraan parkir L2 → L4, L3 → L8.
+- [x] Akun buku besar baru: penjualan kendaraan, pembelian barang, denda kontrak. Log baru untuk jemput, isi stok, jual, dan kontrak berulang.
+- [x] Test baru `business_flow_test.dart` (±30 kasus). Test lama disesuaikan dengan 15 level & rencana fase.
+
+**app**
+- [x] Kontrak: badge jenis, rute "Supplier → Toko", daftar barang, tawaran kontrak berulang (terima/tolak), kartu kontrak berulang berjalan (progres, jadwal berikutnya, putus + denda).
+- [x] Kartu **Gudang** (isi, m³, nilai stok, barang dalam perjalanan) + lembar **Isi stok** (supplier → barang → jumlah dibatasi muatan & ruang → pilih kendaraan & rute).
+- [x] Lembar dispatch: sumber barang (dari gudang / beli di supplier), waktu jemput, modal barang, nilai stok yang dipakai. Mendukung isi stok & kontrak berulang.
+- [x] Detail kendaraan: tahun, umur, harga beli, nilai jual, tombol **Jual** (konfirmasi). Dealer: tab **Bekas hari ini**.
+- [x] Fasilitas: "Lv x/15", label **Statistik** / **Ganti tampilan** per upgrade. Renderer memakai tier visual.
+- [x] Jalur depot baru: `toGateDirect` (berputar di apron dock), `toDockIn`, `unloadDock` (pintu terbuka, muatan berkurang), `dockToSlot`. Ditambahkan ke uji tabrakan & uji gerak kontinu.
+- [x] Peta: leg jemput (kuning) + pin supplier; leg aktif ditebalkan.
+- [x] **Depot hidup** (`depot_ambient.dart`): satpam patroli saat gerbang sepi, sopir yang tidak bertugas istirahat di gazebo, staf merapikan stok di platform dock bila gudang berisi, mekanik siaga di depan bengkel, staf pulang di luar jam 06.00–19.00. Test `depot_ambient_test.dart` (bebas rintangan & lintasan kendaraan). Jalur patroli sudah dicek terhadap rintangan layout dengan Python.
+
+## Resume (mulai dari sini)
+
+1. **Verifikasi compile & test** (wajib, belum pernah dijalankan):
+   - `cd packages/sim_core && dart analyze && dart test`
+   - `cd app && ../tools/sync_app_assets.sh` (atau setara) lalu `flutter analyze && flutter test`
+   - Kirim error ke Claude bila ada. Kemungkinan titik rawan: inferensi tipe `fold`, pattern `if-case` di koleksi, panjang baris lint.
+2. **Uji di HP**: terima jasa angkut (kendaraan tidak ke dock), pesanan toko tanpa/dengan stok, isi stok (bongkar di dock), kontrak berulang lintas hari, jual & beli bekas, upgrade level 2 (statistik) vs 4 (ganti tampilan), depot saat sepi (patroli, gazebo).
+3. Penyeimbangan: harga barang, markup 15%, diskon grosir 8%, nilai jual 85%, harga level 9–15.
+
+## Belum dikerjakan (backlog revisi)
+
+- [ ] **Tier visual 4 (L12) & 5 (L15, terminal)**: aset 3D + layout lahan diperluas (slot > 8, dock > 3, jalur gerbang > 2, bay > 2). Sementara L12–15 memakai tampilan tier 3 dan hanya menaikkan statistik.
+- [ ] Cold storage (barang beku belum bisa disimpan di gudang), kedaluwarsa & barang rusak di gudang.
+- [ ] **Lelang kendaraan** (fitur berikutnya sesuai user).
+- [ ] Tawaran kontrak kedaluwarsa (sekarang tawaran tidak hangus).
+- [ ] Kontrak berulang antarkota & pesanan toko multi-tujuan.
+- [ ] Depot hidup lanjutan: staf datang/pulang berjalan dari parkir motor, forklift bergerak, truk supplier mengantar ke depot.
 
 ## Berikutnya
 

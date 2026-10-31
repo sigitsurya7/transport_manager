@@ -15,6 +15,9 @@ const _accountLabel = {
   LedgerAccount.facilityUpgrade: 'Pembangunan fasilitas',
   LedgerAccount.maintenance: 'Perawatan kendaraan',
   LedgerAccount.devAdjustment: 'Dana mode dev',
+  LedgerAccount.vehicleSale: 'Penjualan kendaraan',
+  LedgerAccount.goodsPurchase: 'Pembelian barang',
+  LedgerAccount.agreementPenalty: 'Denda kontrak',
 };
 
 class FinanceScreen extends StatelessWidget {
@@ -32,8 +35,12 @@ class FinanceScreen extends StatelessWidget {
           ledger.total(LedgerAccount.fuel) +
           ledger.total(LedgerAccount.toll) +
           ledger.total(LedgerAccount.wages) +
-          ledger.total(LedgerAccount.maintenance);
-      final investment = ledger.total(LedgerAccount.vehiclePurchase) + ledger.total(LedgerAccount.facilityUpgrade);
+          ledger.total(LedgerAccount.maintenance) +
+          ledger.total(LedgerAccount.goodsPurchase) +
+          ledger.total(LedgerAccount.agreementPenalty);
+      final investment = ledger.total(LedgerAccount.vehiclePurchase) +
+          ledger.total(LedgerAccount.facilityUpgrade) +
+          ledger.total(LedgerAccount.vehicleSale);
       final entries = ledger.entries.reversed.toList();
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

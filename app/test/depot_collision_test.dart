@@ -104,7 +104,9 @@ void main() {
                     );
                     return;
                   }
-                  if (phase == null || phase.waiting || phase == TripPhase.loading) return;
+                  if (phase == null || phase.waiting || phase == TripPhase.loading || phase == TripPhase.unloadDock) {
+                    return;
+                  }
                 }
               }
 
@@ -115,6 +117,13 @@ void main() {
                 for (var q = 0; q < 2; q++) {
                   check(TripPhase.toGate, dock: d, outQueue: q);
                 }
+                // Isi stok: bongkar di dock lalu kembali ke slot.
+                check(TripPhase.toDockIn, dock: d);
+                check(TripPhase.dockToSlot, dock: d);
+              }
+              // Jasa angkut: keluar slot langsung ke antrean gerbang lewat apron dock 0.
+              for (var q = 0; q < 2; q++) {
+                check(TripPhase.toGateDirect, dock: 0, outQueue: q);
               }
               for (var q = 0; q < 2; q++) {
                 check(TripPhase.waitGateOut, queue: q);

@@ -258,19 +258,37 @@ class _OverlayPainter extends CustomPainter {
     final world = session.world;
     final t = session.displayTime;
 
-    // Rute trip aktif (pergi biru, pulang ungu).
+    // Rute trip aktif (jemput kuning, antar biru, pulang ungu); leg yang
+    // sedang / akan ditempuh ditebalkan.
     for (final trip in world.trips.values.where((tr) => tr.isActive)) {
-      final showOut = trip.phase.index <= TripPhase.outbound.index;
-      for (final outbound in [true, false]) {
-        final points = world.trackFor(trip.id, outbound: outbound).points;
+      final contract = world.contracts[trip.contractId]!;
+      final here = trip.plan.indexOf(trip.phase);
+      LegKind? focus;
+      for (final (kind, phase) in const [
+        (LegKind.pickup, TripPhase.toPickup),
+        (LegKind.outbound, TripPhase.outbound),
+        (LegKind.inbound, TripPhase.inbound),
+      ]) {
+        if (trip.plan.indexOf(phase) >= here && trip.has(phase)) {
+          focus = kind;
+          break;
+        }
+      }
+      for (final kind in LegKind.values) {
+        if (trip.leg(kind) == null) continue;
+        final points = world.trackForLeg(trip.id, kind).points;
         if (points.length < 2) continue;
         final path = Path()..moveTo(_screen(points.first).dx, _screen(points.first).dy);
         for (final p in points.skip(1)) {
           final s = _screen(p);
           path.lineTo(s.dx, s.dy);
         }
-        final color = outbound ? AppColors.routeOut : AppColors.routeBack;
-        final emphasis = outbound == showOut;
+        final color = switch (kind) {
+          LegKind.pickup => AppColors.accent,
+          LegKind.outbound => AppColors.routeOut,
+          LegKind.inbound => AppColors.routeBack,
+        };
+        final emphasis = kind == focus;
         canvas.drawPath(
           path,
           Paint()
@@ -281,8 +299,12 @@ class _OverlayPainter extends CustomPainter {
             ..strokeJoin = StrokeJoin.round,
         );
       }
-      final dest = _screen(world.graph.node(world.contracts[trip.contractId]!.destinationNode));
-      _pin(canvas, dest, AppColors.routeOut, GameGlyph.store);
+      if (contract.pickupNode case final node? when trip.pickup != null) {
+        _pin(canvas, _screen(world.graph.node(node)), AppColors.accent, GameGlyph.warehouse);
+      }
+      if (contract.kind != ContractKind.restock) {
+        _pin(canvas, _screen(world.graph.node(contract.destinationNode)), AppColors.routeOut, GameGlyph.store);
+      }
     }
 
     // Depot.

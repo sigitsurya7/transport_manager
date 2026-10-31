@@ -162,7 +162,10 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
       deviceClock: deviceClock,
       initialMeta: saved.meta,
     ).._savedLogLength = world.log.length;
+    // Tawaran alur lama (muat di depot tanpa stok) dari save sebelum revisi diganti tawaran baru.
+    world.contracts.removeWhere((_, c) => c.status == ContractStatus.offered && c.kind == ContractKind.legacy);
     await session._catchUp();
+    session.refreshOffers();
     return session;
   }
 
@@ -252,17 +255,40 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   // ------------------------------------------------------------- perintah
 
-  List<Contract> get offers =>
-      world.contracts.values.where((c) => c.status == ContractStatus.offered).toList()
+  /// Tawaran kontrak sekali jalan (jasa angkut & pesanan toko).
+  List<Contract> get offers => world.contracts.values
+      .where((c) => c.status == ContractStatus.offered && c.kind != ContractKind.restock && c.agreementId == null)
+      .toList()
+    ..sort((a, b) => a.id.compareTo(b.id));
+
+  List<Agreement> get agreementOffers =>
+      world.agreements.values.where((a) => a.status == AgreementStatus.offered).toList()
         ..sort((a, b) => a.id.compareTo(b.id));
 
-  /// Lengkapi tawaran kontrak sampai [offerCount].
+  List<Agreement> get activeAgreements => world.agreements.values.where((a) => a.isActive).toList()
+    ..sort((a, b) => a.id.compareTo(b.id));
+
+  static const agreementOfferCount = 1;
+
+  /// Lengkapi tawaran: [offerCount] kontrak (jasa angkut & pesanan toko
+  /// bergantian) dan [agreementOfferCount] kontrak berulang.
   void refreshOffers() {
     final depot = world.depots.values.first;
+    if (world.vehicles.isEmpty) return;
     final capacity = world.vehicles.values.map((v) => v.model.payloadKg).reduce(math.max);
     var attempts = 0;
-    while (offers.length < offerCount && attempts++ < offerCount * 2) {
-      world.offerStoreContract(depotId: depot.id, capacityKg: capacity);
+    while (offers.length < offerCount && attempts++ < offerCount * 3) {
+      final haul = offers.where((c) => c.kind == ContractKind.haul).length;
+      final store = offers.length - haul;
+      if (store < haul) {
+        world.offerStoreOrder(depotId: depot.id, capacityKg: capacity);
+      } else {
+        world.offerHaulContract(depotId: depot.id, capacityKg: capacity);
+      }
+    }
+    attempts = 0;
+    while (agreementOffers.length < agreementOfferCount && attempts++ < 3) {
+      world.offerAgreement(depotId: depot.id, capacityKg: capacity);
     }
     notifyListeners();
   }
@@ -291,6 +317,9 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   void startUpgrade(FacilityType type) => _command(() => world.startUpgrade(depot.id, type));
   void buyVehicle(String modelId) => _command(() => world.buyVehicle(depot.id, modelId));
+  void buyUsedVehicle(String listingKey) => _command(() => world.buyUsedVehicle(depot.id, listingKey));
+  void sellVehicle(int vehicleId) => _command(() => world.sellVehicle(vehicleId));
+  void cancelAgreement(int agreementId) => _command(() => world.cancelAgreement(agreementId));
   void hire(EmployeeRole role, {int candidate = 0}) => _command(() => world.hire(depot.id, role, candidate: candidate));
   void releaseStaff(EmployeeRole role) => _command(() => world.releaseStaff(depot.id, role));
   void releaseDriver(int driverId) => _command(() => world.releaseDriver(driverId));
@@ -304,6 +333,22 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   DispatchCheck check(Contract contract, Vehicle vehicle, Driver driver) =>
       world.check(contractId: contract.id, vehicleId: vehicle.id, driverId: driver.id);
+
+  DispatchCheck checkAgreement(Agreement a, Vehicle vehicle, Driver driver) =>
+      world.checkAgreement(agreementId: a.id, vehicleId: vehicle.id, driverId: driver.id);
+
+  Trip acceptAgreement(Agreement a, Vehicle vehicle, Driver driver, RouteMode mode) {
+    final trip = world.acceptAgreement(agreementId: a.id, vehicleId: vehicle.id, driverId: driver.id, mode: mode);
+    refreshOffers();
+    unawaited(save());
+    return trip;
+  }
+
+  /// Rencana isi stok (belum disimpan sampai diberangkatkan).
+  Contract planRestock(Supplier supplier, List<OrderLine> lines) =>
+      world.planRestock(depotId: depot.id, supplierId: supplier.id, lines: lines);
+
+  void discardRestock(Contract contract) => world.discardRestock(contract.id);
 
   Trip dispatch(Contract contract, Vehicle vehicle, Driver driver, RouteMode mode) {
     final trip = world.dispatch(contractId: contract.id, vehicleId: vehicle.id, driverId: driver.id, mode: mode);

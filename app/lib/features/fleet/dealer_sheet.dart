@@ -33,8 +33,95 @@ String? purchaseBlocker(GameSession session, VehicleModel m) {
           'level ${m.unlock.level}',
     PurchaseProblem.noFreeSlot => 'Parkir penuh',
     PurchaseProblem.insufficientCash => 'Kas tidak cukup',
-    PurchaseProblem.unknownModel => 'Tidak tersedia',
+    PurchaseProblem.unknownModel || PurchaseProblem.listingGone => 'Tidak tersedia',
   };
+}
+
+String? _usedBlocker(GameSession session, UsedListing l) {
+  final problems = session.world.usedPurchaseProblems(session.depot.id, l.key);
+  if (problems.isEmpty) return null;
+  return switch (problems.first) {
+    PurchaseProblem.needsTruckTerminal => 'Butuh terminal truk',
+    PurchaseProblem.facilityLevelTooLow =>
+      'Butuh ${session.data.content.facilities[FacilityType.parse(l.model.unlock.facilityId!)].name.toLowerCase()} '
+          'level ${l.model.unlock.level}',
+    PurchaseProblem.noFreeSlot => 'Parkir penuh',
+    PurchaseProblem.insufficientCash => 'Kas tidak cukup',
+    PurchaseProblem.unknownModel || PurchaseProblem.listingGone => 'Sudah terjual',
+  };
+}
+
+/// Kartu kendaraan bekas: umur, odometer, kondisi rata-rata, harga.
+class _UsedCard extends StatelessWidget {
+  const _UsedCard({required this.session, required this.listing});
+
+  final GameSession session;
+  final UsedListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = listing;
+    final blocker = _usedBlocker(session, l);
+    final cond = (l.averageCondition * 100).round();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                VehicleIcon(l.model.visual, width: 96),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.model.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                      Text(
+                        'Tahun ${l.builtYear} · ${formatKm(l.odometerM)} · kondisi $cond%',
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(formatRupiah(l.priceIdr),
+                              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w800)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'baru ${formatRupiahCompact(l.model.priceIdr)}',
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: blocker == null
+                    ? () {
+                        session.buyUsedVehicle(l.key);
+                        Navigator.pop(context);
+                      }
+                    : null,
+                icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                label: Text(blocker ?? 'Beli bekas'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _Dealer extends StatefulWidget {
@@ -50,6 +137,7 @@ class _Dealer extends StatefulWidget {
 class _DealerState extends State<_Dealer> {
   String _category = 'pickup';
   bool _compare = false;
+  bool _used = false;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -89,6 +177,25 @@ class _DealerState extends State<_Dealer> {
             style: const TextStyle(color: AppColors.textMuted),
           ),
           const SizedBox(height: 10),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: false, label: Text('Baru')),
+              ButtonSegment(value: true, label: Text('Bekas hari ini')),
+            ],
+            selected: {_used},
+            onSelectionChanged: (s) => setState(() => _used = s.first),
+          ),
+          const SizedBox(height: 10),
+          if (_used) ...[
+            const Text(
+              'Penawaran bekas berganti setiap hari. Harga mengikuti umur, odometer, dan kondisi.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            for (final l in session.world.usedListings(session.depot.id))
+              Padding(padding: const EdgeInsets.only(bottom: 10), child: _UsedCard(session: session, listing: l)),
+          ] else ...[
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -114,6 +221,7 @@ class _DealerState extends State<_Dealer> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _ModelCard(session: session, model: m),
               ),
+          ],
         ],
       );
     },

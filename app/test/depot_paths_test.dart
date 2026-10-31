@@ -96,7 +96,16 @@ void main() {
   });
 
   test('gerak kontinu: tidak ada lompatan posisi di dalam fase', () {
-    for (final phase in [TripPhase.toDock, TripPhase.toGate, TripPhase.gateOut, TripPhase.gateIn, TripPhase.toSlot]) {
+    for (final phase in [
+      TripPhase.toDock,
+      TripPhase.toGate,
+      TripPhase.toGateDirect,
+      TripPhase.gateOut,
+      TripPhase.gateIn,
+      TripPhase.toSlot,
+      TripPhase.toDockIn,
+      TripPhase.dockToSlot,
+    ]) {
       for (final slot in [0, 4, 7]) {
         var prev = pose(snap(phase, 0, slot: slot), dockLevel: 3, gateLevel: 3)!;
         for (var i = 1; i <= 400; i++) {
