@@ -13,10 +13,12 @@ import 'depot_paths.dart';
 
 /// Kamera orbit di sekitar depot.
 class _OrbitCamera {
-  double yaw = 1.05;
-  double pitch = 0.62;
-  double distance = 46;
-  static const target = (x: -1.0, y: 0.0, z: 3.0);
+  double yaw = 1.2;
+  double pitch = 0.66;
+  double distance = 52;
+
+  /// Pusat pandang: cukup ke timur agar loading dock ikut terlihat.
+  static const target = (x: 3.0, y: 0.0, z: 1.0);
 
   void drag(double dx, double dy) {
     yaw -= dx * 0.008;
@@ -25,12 +27,17 @@ class _OrbitCamera {
 
   void zoom(double factor) => distance = (distance / factor).clamp(18.0, 80.0);
 
-  vm.Vector3 get position => vm.Vector3(
+  vm.Vector3 get position => toEngine(
         target.x + distance * math.cos(pitch) * math.cos(yaw),
         target.y + distance * math.sin(pitch),
         target.z + distance * math.cos(pitch) * math.sin(yaw),
       );
 }
+
+/// Koordinat depot (sama dengan GLB & `depot_layout.json`) → ruang engine.
+/// Importer GLB flutter_scene membalik sumbu Z, jadi posisi node & kamera
+/// ikut dibalik agar sejajar dengan geometri.
+vm.Vector3 toEngine(double x, double y, double z) => vm.Vector3(x, y, -z);
 
 /// Depot 3D: lingkungan aktif yang menampilkan kendaraan sesuai fase trip di
 /// simulasi. Renderer hanya membaca snapshot; tidak mengubah state.
@@ -107,8 +114,10 @@ class _DepotScreenState extends State<DepotScreen> {
       node.position = vm.Vector3(0, -50, 0);
       return;
     }
-    node.position = vm.Vector3(pose.x, 0, pose.z);
-    node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), pose.heading);
+    node.position = toEngine(pose.x, 0, pose.z);
+    // Model yang diimpor menghadap -X di ruang engine; diverifikasi di HP:
+    // parkir (hidung ke jalur) dan melaju di jalur (hidung ke arah gerak).
+    node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), pose.heading + math.pi);
   }
 
   Camera _frame(Duration elapsed) {
@@ -125,7 +134,7 @@ class _DepotScreenState extends State<DepotScreen> {
     }
     return PerspectiveCamera(
       position: _camera.position,
-      target: vm.Vector3(_OrbitCamera.target.x, _OrbitCamera.target.y, _OrbitCamera.target.z),
+      target: toEngine(_OrbitCamera.target.x, _OrbitCamera.target.y, _OrbitCamera.target.z),
       fovRadiansY: math.pi / 4.2,
     );
   }

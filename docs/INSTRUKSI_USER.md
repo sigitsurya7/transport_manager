@@ -66,3 +66,7 @@ Interpretasi: benchmark routing dengan data nyata ditunda (unduhan Overpass dihe
 > Ya lanjutkan, gunakan saja model 3D yang mudah dan tidak terlalu rumit. Yang terpenting adalah hasil 3D dan rendernya terlihat bagus, siap di publish serta tidak berat sama sekali.
 
 Keputusan: **flutter_scene** jadi engine final (Thermion tidak dilanjutkan). Arah visual: low-poly bergaya, warna flat yang rapi + pencahayaan, jumlah segitiga kecil, tanpa tekstur besar.
+
+## 2026-10-31 — Install via USB
+
+> Sudah ku aktifkan Install via USB, coba pasang lagi

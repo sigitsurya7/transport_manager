@@ -132,7 +132,11 @@ class _OfflineSummarySheet extends StatelessWidget {
             Text('Selama kamu pergi', style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
-              hours >= 1 ? '${hours.toStringAsFixed(1).replaceAll('.', ',')} jam berlalu' : '${summary.realElapsed.inMinutes} menit berlalu',
+              hours >= 1
+                  ? '${hours.toStringAsFixed(1).replaceAll('.', ',')} jam berlalu'
+                  : summary.realElapsed.inMinutes >= 1
+                      ? '${summary.realElapsed.inMinutes} menit berlalu'
+                      : 'Kurang dari 1 menit berlalu',
               style: const TextStyle(color: AppColors.textMuted),
             ),
             if (summary.truncated)

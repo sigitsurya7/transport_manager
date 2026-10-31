@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 2b — core prototype dapat dimainkan (APK siap), menunggu uji di HP.** Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
+**Tahap 2b — core prototype dapat dimainkan dan sudah diuji di HP.** Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -95,11 +95,12 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
   - 12 test app (format, jalur depot, integrasi: game baru Bandung → pengiriman penuh → save → load). Bug ditemukan & diperbaiki: save yang tumpang tindih bisa membuang state terbaru.
 - [x] Model 3D baru: depot 2.952 segitiga (gudang beratap pelana, pos jaga, palang gerbang, jalan umum bermarka, pohon, lampu, rumah tetangga), pikap 468, pekerja 184; total aset ±250 KB. Test winding per segitiga & anggaran segitiga.
 - [x] APK release arm64: **23,6 MB**.
-- [ ] Belum diuji di HP: pemasangan via USB dibatalkan oleh HP (perlu konfirmasi di layar / opsi "Install via USB").
+- [x] **Diuji di HP (REDMI Note 15)**: game baru Bandung, depot 3D, kontrak, dispatch, pikap keluar slot → jalur → dock → gerbang, catch-up offline ("keluar dari gerbang" tercatat saat app ditutup), peta dengan kendaraan mengikuti jalan nyata & mode ikuti, lanjutkan dari save.
+- [x] Perbaikan dari uji di HP: sumbu Z GLB terbalik di flutter_scene (posisi node & kamera dikonversi), arah hadap kendaraan, kamera awal kini memperlihatkan loading dock, ringkasan offline tidak muncul untuk jeda singkat tanpa kejadian.
 - [ ] Map pack baru Bandung (dari ubin Overpass, jalan utama). Kota lain menunggu ekstrak Jawa (unduhan dilanjutkan di latar belakang).
 
 ## Berikutnya
 
-- [ ] Pasang APK di HP, cek visual & performa depot 3D dan peta, perbaiki temuan.
+- [ ] Uji satu siklus penuh sampai kembali & parkir; ukur fps di layar depot & peta pada game sungguhan.
 - [ ] Bangun map pack 6 kota dari ekstrak Jawa (termasuk jalan residential) & verifikasi koordinat depot.
 - [ ] Setelah itu: **Tahap 3 — depot simulation** (antrean gerbang/dock, pekerja, upgrade fasilitas + visual).

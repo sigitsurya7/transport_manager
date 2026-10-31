@@ -46,6 +46,9 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
   static const _autosaveEvery = Duration(seconds: 60);
   static const _tickEvery = Duration(milliseconds: 200);
 
+  /// Ringkasan offline tanpa kejadian hanya ditampilkan setelah jeda ini.
+  static const _summaryMinOffline = Duration(minutes: 10);
+
   final GameData data;
   final SimWorld world;
   final SaveStore store;
@@ -202,12 +205,13 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     final logStart = world.log.length;
     final result = clock.catchUpOffline(estimate.elapsed);
     world.advanceTo(clock.now);
-    if (result.simSecondsAdvanced >= 60) {
+    final entries = world.log.sublist(logStart);
+    if (entries.isNotEmpty || result.requested >= _summaryMinOffline) {
       _pendingSummary = OfflineSummary(
         realElapsed: result.requested,
         applied: result.applied,
         anomaly: estimate.anomaly,
-        entries: world.log.sublist(logStart),
+        entries: entries,
       );
     }
     await save(sample: now);
