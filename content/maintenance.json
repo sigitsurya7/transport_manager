@@ -1,0 +1,33 @@
+{
+  "_comment": "Keausan & perawatan kendaraan (Tahap 4.1). Kondisi komponen 0..1. Keausan dipercepat agar terasa dalam skala waktu game (1 hari game = 2,4 jam nyata). Biaya rupiah, durasi menit game; dikali faktor kelas kendaraan & bengkel.",
+  "components": [
+    {"id": "engine", "name": "Mesin", "wear_per_1000km": 0.06},
+    {"id": "transmission", "name": "Transmisi", "wear_per_1000km": 0.05},
+    {"id": "brakes", "name": "Rem", "wear_per_1000km": 0.15},
+    {"id": "tires", "name": "Ban", "wear_per_1000km": 0.18},
+    {"id": "suspension", "name": "Suspensi", "wear_per_1000km": 0.08},
+    {"id": "cooling", "name": "Sistem pendingin", "wear_per_1000km": 0.06},
+    {"id": "electrical", "name": "Kelistrikan", "wear_per_1000km": 0.04}
+  ],
+  "loaded_wear_factor": 0.6,
+  "effects": {
+    "fuel_per_engine_wear": 0.3,
+    "fuel_per_tire_wear": 0.1,
+    "min_speed_factor": 0.8
+  },
+  "class_cost_factor": {
+    "pickup_open": 1.0, "pickup_box": 1.0, "mini_truck": 1.3, "light_truck": 1.8,
+    "medium_truck": 2.4, "heavy_rigid": 3.2, "tractor_head": 3.6
+  },
+  "actions": [
+    {"id": "service", "name": "Servis rutin (oli & filter)", "cost_idr": 650000, "minutes": 60,
+     "restore": {"engine": 0.25, "cooling": 0.3, "electrical": 0.3}},
+    {"id": "tires", "name": "Ganti ban", "cost_idr": 2400000, "minutes": 45, "restore": {"tires": 1.0}},
+    {"id": "brakes", "name": "Perbaikan rem", "cost_idr": 950000, "minutes": 60, "restore": {"brakes": 1.0}},
+    {"id": "suspension", "name": "Perbaikan suspensi", "cost_idr": 1300000, "minutes": 90, "restore": {"suspension": 1.0}},
+    {"id": "overhaul", "name": "Overhaul mesin & transmisi", "cost_idr": 9000000, "minutes": 360,
+     "restore": {"engine": 1.0, "transmission": 1.0, "cooling": 1.0}},
+    {"id": "full", "name": "Perbaikan menyeluruh", "cost_idr": 13500000, "minutes": 480,
+     "restore": {"engine": 1.0, "transmission": 1.0, "brakes": 1.0, "tires": 1.0, "suspension": 1.0, "cooling": 1.0, "electrical": 1.0}}
+  ]
+}

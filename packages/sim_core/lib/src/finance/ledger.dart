@@ -7,6 +7,7 @@ enum LedgerAccount {
   wages,
   vehiclePurchase,
   facilityUpgrade,
+  maintenance,
 
   /// Dana tambahan dari mode pengembang (build DEV_TOOLS); bukan pendapatan.
   devAdjustment,

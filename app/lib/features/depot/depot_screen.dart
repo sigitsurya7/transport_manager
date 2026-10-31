@@ -23,8 +23,7 @@ vm.Vector3 toEngine(double x, double y, double z) => vm.Vector3(x, y, -z);
 /// Sumbu Z engine terbalik (cermin) dan model menghadap -X setelah impor,
 /// sehingga sudutnya `π - heading`. Diverifikasi di HP: rotasi 0 → hidung ke
 /// -x depot; rotasi -π/2 → hidung ke +z (ke arah jalan).
-vm.Quaternion headingRotation(double heading) =>
-    vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), math.pi - heading);
+vm.Quaternion headingRotation(double heading) => vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), math.pi - heading);
 
 /// Kamera orbit di sekitar depot.
 class _OrbitCamera {
@@ -43,10 +42,10 @@ class _OrbitCamera {
   void zoom(double factor) => distance = (distance / factor).clamp(18.0, 90.0);
 
   vm.Vector3 get position => toEngine(
-        target.x + distance * math.cos(pitch) * math.cos(yaw),
-        target.y + distance * math.sin(pitch),
-        target.z + distance * math.cos(pitch) * math.sin(yaw),
-      );
+    target.x + distance * math.cos(pitch) * math.cos(yaw),
+    target.y + distance * math.sin(pitch),
+    target.z + distance * math.cos(pitch) * math.sin(yaw),
+  );
 }
 
 /// Depot 3D: lingkungan aktif yang menampilkan state simulasi. Renderer hanya
@@ -80,6 +79,9 @@ class _DepotScreenState extends State<DepotScreen> {
 
   /// Staf gudang: (tangan kosong, memanggul kardus); satu tampil, satu disembunyikan.
   final List<(Node, Node)> _staff = [];
+
+  /// Mekanik yang bekerja di samping kendaraan yang sedang diservis.
+  final List<Node> _mechanics = [];
 
   /// Barang yang disiapkan di platform dock (berkurang saat dimuat).
   final List<Node> _staging = [];
@@ -218,6 +220,11 @@ class _DepotScreenState extends State<DepotScreen> {
     }
 
     _driverLoader ??= await pair();
+    while (_mechanics.length < world.vehicles.length) {
+      final node = await _instance('worker');
+      _mechanics.add(node);
+      _scene.add(node);
+    }
     while (_staging.length < 3 * _stagingPerDock) {
       final crate = await _instance('cargo_crate');
       _staging.add(crate);
@@ -279,6 +286,7 @@ class _DepotScreenState extends State<DepotScreen> {
       }
       _animateBooms(boomOpen);
       _placeStaging(snaps, motion.layout.docks(dockLevel));
+      _placeMechanics(motion, snaps, elapsed.inMicroseconds / 1e6);
       _animatePeople(motion, elapsed.inMicroseconds / 1e6, dockLevel, gateLevel, loadingDocks);
     }
     return PerspectiveCamera(
@@ -351,6 +359,20 @@ class _DepotScreenState extends State<DepotScreen> {
     }
   }
 
+  /// Kendaraan di bengkel tetap di slotnya; mekanik bekerja di sisi kabin.
+  void _placeMechanics(DepotMotion motion, List<VehicleSnapshot> snaps, double seconds) {
+    var used = 0;
+    for (final snap in snaps.where((s) => s.inWorkshop)) {
+      if (used >= _mechanics.length) break;
+      final slot = motion.layout.slots[snap.slotIndex];
+      final sway = 0.25 * math.sin(seconds * 1.7 + used);
+      _place(_mechanics[used++], (x: slot.x + 1.55, z: slot.z - 1.6 + sway, heading: math.pi));
+    }
+    for (var i = used; i < _mechanics.length; i++) {
+      _place(_mechanics[i], null);
+    }
+  }
+
   /// Gerbang 1 jalur: satu palang. Multi-gate: palang ke-i melayani jalur ke-i.
   void _animateBooms(Map<int, double> openByLane) {
     for (final (i, (spec, node)) in _booms.indexed) {
@@ -376,11 +398,11 @@ class _DepotScreenState extends State<DepotScreen> {
         _place(carry, null);
         if (identical(loaders, _staff)) {
           final dock = docks[i % docks.length];
-          _place(
-            empty,
-            (x: dock.x - 1.4 + (i ~/ docks.length) * 0.7, z: -4.6, heading: headingSouth + 0.3 * math.sin(seconds * 0.4 + i)),
-            y: platformY,
-          );
+          _place(empty, (
+            x: dock.x - 1.4 + (i ~/ docks.length) * 0.7,
+            z: -4.6,
+            heading: headingSouth + 0.3 * math.sin(seconds * 0.4 + i),
+          ), y: platformY);
         } else {
           _place(empty, null);
         }
@@ -408,44 +430,54 @@ class _DepotScreenState extends State<DepotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      const Positioned.fill(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF9CC4E4), Color(0xFFD9E7EF)],
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF9CC4E4), Color(0xFFD9E7EF)],
+              ),
             ),
           ),
         ),
-      ),
-      if (_motion != null)
-        Positioned.fill(
-          child: GestureDetector(
-            onScaleStart: (_) => _pinchStart = 1,
-            onScaleUpdate: (d) {
-              if (d.pointerCount > 1) {
-                _camera.zoom(d.scale / _pinchStart);
-                _pinchStart = d.scale;
-              } else {
-                _camera.drag(d.focalPointDelta.dx, d.focalPointDelta.dy);
-              }
-            },
-            child: TickerMode(enabled: widget.active, child: SceneView(_scene, cameraBuilder: _frame)),
+        if (_motion != null)
+          Positioned.fill(
+            child: GestureDetector(
+              onScaleStart: (_) => _pinchStart = 1,
+              onScaleUpdate: (d) {
+                if (d.pointerCount > 1) {
+                  _camera.zoom(d.scale / _pinchStart);
+                  _pinchStart = d.scale;
+                } else {
+                  _camera.drag(d.focalPointDelta.dx, d.focalPointDelta.dy);
+                }
+              },
+              child: TickerMode(
+                enabled: widget.active,
+                child: SceneView(_scene, cameraBuilder: _frame),
+              ),
+            ),
+          )
+        else
+          Center(
+            child: _error == null
+                ? const CircularProgressIndicator()
+                : Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Depot 3D gagal dimuat: $_error', style: const TextStyle(color: AppColors.negative)),
+                  ),
           ),
-        )
-      else
-        Center(
-          child: _error == null
-              ? const CircularProgressIndicator()
-              : Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('Depot 3D gagal dimuat: $_error', style: const TextStyle(color: AppColors.negative)),
-                ),
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: _DepotPanel(session: session, onOpenContracts: widget.onOpenContracts),
         ),
-      Positioned(left: 12, right: 12, bottom: 12, child: _DepotPanel(session: session, onOpenContracts: widget.onOpenContracts)),
-    ]);
+      ],
+    );
   }
 }
 
@@ -458,42 +490,52 @@ class _DepotPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: session,
-        builder: (context, _) {
-          final world = session.world;
-          final depot = world.depots.values.first;
-          final occupied = depot.slots.whereType<int>().length;
-          final construction = depot.construction;
-          final busy = world.vehicles.values.where((v) => !v.isAvailable).length;
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.outline),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Row(children: [
-                  Expanded(child: Text(depot.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-                  Text('Parkir $occupied/${depot.parkingSlots} · Dock ${world.dockCount(depot)}',
-                      style: const TextStyle(color: AppColors.textMuted)),
-                ]),
-                const SizedBox(height: 4),
-                Text(
-                  '${world.vehicles.length} kendaraan ($busy bertugas) · ${depot.warehouseStaff} staf gudang',
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                ),
-                if (construction != null) ...[
-                  const SizedBox(height: 10),
-                  _ConstructionRow(session: session, construction: construction),
+    listenable: session,
+    builder: (context, _) {
+      final world = session.world;
+      final depot = world.depots.values.first;
+      final occupied = depot.slots.whereType<int>().length;
+      final construction = depot.construction;
+      final busy = world.vehicles.values.where((v) => !v.isAvailable).length;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(depot.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  ),
+                  Text(
+                    'Parkir $occupied/${depot.parkingSlots} · Dock ${world.dockCount(depot)}',
+                    style: const TextStyle(color: AppColors.textMuted),
+                  ),
                 ],
-                if (world.vehicles.length == 1) ...[
-                  const SizedBox(height: 8),
-                  _VehicleRow(session: session, vehicle: world.vehicles.values.single),
-                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${world.vehicles.length} kendaraan ($busy bertugas) · ${depot.warehouseStaff} staf gudang',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
+              if (construction != null) ...[
                 const SizedBox(height: 10),
-                Row(children: [
+                _ConstructionRow(session: session, construction: construction),
+              ],
+              if (world.vehicles.length == 1) ...[
+                const SizedBox(height: 8),
+                _VehicleRow(session: session, vehicle: world.vehicles.values.single),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => showFacilitiesSheet(context, session),
@@ -509,12 +551,14 @@ class _DepotPanel extends StatelessWidget {
                       label: Text(session.offers.isEmpty ? 'Kontrak' : '${session.offers.length} kontrak'),
                     ),
                   ),
-                ]),
-              ]),
-            ),
-          );
-        },
+                ],
+              ),
+            ],
+          ),
+        ),
       );
+    },
+  );
 }
 
 class _ConstructionRow extends StatelessWidget {
@@ -528,23 +572,33 @@ class _ConstructionRow extends StatelessWidget {
     final spec = session.data.content.facilities[construction.type];
     final total = construction.finishAt - construction.startedAt;
     final done = ((session.world.now - construction.startedAt) / total).clamp(0.0, 1.0);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const GlyphIcon(GameGlyph.construction, size: 18, color: AppColors.accent),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text('Membangun ${spec.name}: ${spec.level(construction.toLevel).label}',
-              style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const GlyphIcon(GameGlyph.construction, size: 18, color: AppColors.accent),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Membangun ${spec.name}: ${spec.level(construction.toLevel).label}',
+                style: const TextStyle(fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              'selesai ${formatGameTime(construction.finishAt, fromSimSeconds: session.world.now)}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ],
         ),
-        Text('selesai ${formatGameTime(construction.finishAt, fromSimSeconds: session.world.now)}',
-            style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-      ]),
-      const SizedBox(height: 6),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(value: done, minHeight: 5, backgroundColor: AppColors.outline),
-      ),
-    ]);
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(value: done, minHeight: 5, backgroundColor: AppColors.outline),
+        ),
+      ],
+    );
   }
 }
 
@@ -559,25 +613,46 @@ class _VehicleRow extends StatelessWidget {
     final snap = session.world.vehicleSnapshot(vehicle.id);
     final trip = vehicle.tripId == null ? null : session.world.trips[vehicle.tripId];
     final driver = trip == null ? null : session.world.drivers[trip.driverId];
-    final status = snap.phase == null ? 'Siap di slot ${vehicle.slotIndex + 1}' : phaseLabel[snap.phase]!;
-    return Row(children: [
-      VehicleIcon(vehicle.model.visual, width: 48),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(vehicle.model.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(driver == null ? status : '$status · ${driver.name}', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-        ]),
-      ),
-      Text('${(vehicle.odometerM / 1000).toStringAsFixed(0)} km', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-    ]);
+    final status = snap.inWorkshop
+        ? 'Di bengkel'
+        : snap.phase == null
+        ? 'Siap di slot ${vehicle.slotIndex + 1}'
+        : phaseLabel[snap.phase]!;
+    return Row(
+      children: [
+        VehicleIcon(vehicle.model.visual, width: 48),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(vehicle.model.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                driver == null ? status : '$status · ${driver.name}',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '${(vehicle.odometerM / 1000).toStringAsFixed(0)} km',
+          style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
+      ],
+    );
   }
 }
 
 /// Node 3D satu kendaraan: model tertutup, varian pintu terbuka (box), dan
 /// palet muatan di titik-titik lantai bak.
 class _VehicleView {
-  _VehicleView({required this.visual, required this.closed, required this.open, required this.slots, required this.crates});
+  _VehicleView({
+    required this.visual,
+    required this.closed,
+    required this.open,
+    required this.slots,
+    required this.crates,
+  });
 
   final String visual;
   final Node closed;

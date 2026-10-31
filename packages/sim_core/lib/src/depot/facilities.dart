@@ -3,6 +3,7 @@ enum FacilityType {
   parking('parking'),
   gate('gate'),
   loadingDock('loading_dock'),
+  workshop('workshop'),
   warehouse('warehouse'),
   office('office');
 
@@ -64,6 +65,9 @@ class FacilityCatalog {
     _requireStat(FacilityType.gate, 'pass_s');
     _requireStat(FacilityType.loadingDock, 'docks');
     _requireStat(FacilityType.loadingDock, 'speed');
+    _requireStat(FacilityType.workshop, 'bays');
+    _requireStat(FacilityType.workshop, 'speed');
+    _requireStat(FacilityType.workshop, 'cost_factor');
     _requireStat(FacilityType.warehouse, 'capacity_m3');
     _requireStat(FacilityType.office, 'staff_max');
     for (final s in _specs.values) {

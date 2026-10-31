@@ -332,7 +332,8 @@ LAYOUT = {
     },
     # Titik penanda konstruksi per fasilitas (di luar jalur kendaraan).
     "anchors": {
-        "parking": (-9.0, -10.5),
+        "parking": (-24.0, -12.0),
+        "workshop": (-7.75, -12.5),
         "gate": (9.5, 17.3),
         "loading_dock": (17.0, 1.0),
         "warehouse": (1.5, -11.0),
@@ -596,6 +597,45 @@ def build_office(level: int) -> MeshBuilder:
         m.box("gate_white", (ox - 4.3, 6.2, 9.8), (1.2, 0.4, 0.04))
         m.block_box(ox - 4.9, 9.8, 0.2, 0.2)
     bush(m, ox - ow / 2 - 0.9, oz + 1.0, 0.8)
+    return m
+
+
+def build_workshop(level: int) -> MeshBuilder:
+    """Bengkel di selatan area parkir. Level 1: gudang perkakas (servis di bengkel luar)."""
+    m = MeshBuilder()
+    if level == 1:
+        m.box_on_ground("wall", -2.5, -13.6, (2.4, 2.2, 1.8))
+        m.box("roof_dark", (-2.5, 2.3, -13.6), (2.7, 0.15, 2.1))
+        m.box_on_ground("door", -2.5, -12.68, (1.0, 1.8, 0.05))
+        for i in range(3):
+            m.cylinder("tire", (-4.2, 0.15 + i * 0.3, -13.9), 0.42, 0.26, sides=10)
+        m.block(-4.7, -14.55, -1.25, -12.6)
+        return m
+    x0, x1 = (-12.0, -3.5) if level == 2 else (-13.0, -1.0)
+    z0, z1 = -14.6, -10.4
+    h = 4.4 if level == 2 else 5.2
+    cx = (x0 + x1) / 2
+    m.box_on_ground("wall_base", cx, (z0 + z1) / 2, (x1 - x0 + 0.1, 0.5, z1 - z0 + 0.1))
+    m.box_on_ground("wall", cx, (z0 + z1) / 2, (x1 - x0, h, z1 - z0))
+    m.box("roof_dark", (cx, h + 0.12, (z0 + z1) / 2), (x1 - x0 + 0.5, 0.24, z1 - z0 + 0.5))
+    m.box("accent", (cx, h - 0.35, z1 + 0.03), (x1 - x0, 0.45, 0.06))
+    bays = 1 if level == 2 else 2
+    width = (x1 - x0) / bays
+    for b in range(bays):
+        dx = x0 + width * (b + 0.5)
+        m.box_on_ground("door", dx, z1 + 0.04, (3.4, 3.4, 0.06))
+        for i in range(1, 7):
+            m.box("door_line", (dx, i * 0.5, z1 + 0.075), (3.4, 0.05, 0.02))
+        m.box_on_ground("frame", dx, z1 + 0.06, (3.8, 0.18, 0.1), y0=3.4)
+    # rak ban & kotak perkakas di sisi
+    for i in range(3):
+        m.cylinder("tire", (x1 + 0.7, 0.15 + i * 0.3, -11.2), 0.42, 0.26, sides=10)
+    m.box_on_ground("gate_red", x1 + 0.7, -12.4, (0.6, 0.9, 0.5))
+    if level == 3:                                           # crane gantry di atap
+        m.box("frame", (cx, h + 0.8, z1 - 0.6), (x1 - x0 - 1, 0.25, 0.25))
+        for x in (x0 + 0.6, x1 - 0.6):
+            m.box_on_ground("frame", x, z1 - 0.6, (0.25, 0.8, 0.25), y0=h + 0.24)
+    m.block(x0 - 0.05, z0 - 0.05, x1 + 1.05, z1 + 0.1)
     return m
 
 
@@ -983,7 +1023,7 @@ def build_depot() -> MeshBuilder:
     for p in boom.parts.values():
         p["pos"] = [(x + hx, y, z + hz) for x, y, z in p["pos"]]
     return merge(build_base(), build_props(), build_parking(1), build_gate(1), boom, build_dock(1),
-                 build_warehouse(1), build_office(1))
+                 build_warehouse(1), build_office(1), build_workshop(1))
 
 
 VEHICLES = tuple(VEHICLE_BUILDERS)
@@ -997,6 +1037,7 @@ def models() -> dict:
         out[f"dock_{lvl}"] = build_dock(lvl)
         out[f"warehouse_{lvl}"] = build_warehouse(lvl)
         out[f"office_{lvl}"] = build_office(lvl)
+        out[f"workshop_{lvl}"] = build_workshop(lvl)
     out["boom_long"] = build_boom(7.0, 1)
     out["boom_short"] = build_boom(4.0, 1)
     out["boom_short_r"] = build_boom(4.0, -1)

@@ -4,6 +4,9 @@ import '../routing/route_planner.dart';
 enum DispatchProblem {
   contractNotOffered,
   vehicleBusy,
+
+  /// Kendaraan sedang di bengkel (atau antre servis).
+  vehicleInWorkshop,
   driverBusy,
 
   /// Kelas kendaraan di bawah minimum jangkauan kontrak (mis. pikap untuk antarkota).

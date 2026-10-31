@@ -74,11 +74,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             const Align(alignment: Alignment.centerLeft, child: AppLogo(size: 72)),
             const SizedBox(height: 12),
-            Text('Transport Manager',
-                style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.w800)),
+            Text(
+              'Transport Manager',
+              style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
-            const Text('Bangun perusahaan logistik dari satu pikap.',
-                style: TextStyle(color: AppColors.textMuted)),
+            const Text('Bangun perusahaan logistik dari satu pikap.', style: TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 28),
             FilledButton.icon(
               onPressed: ready && !_busy ? _newGame : null,
@@ -88,14 +89,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (data.hasError || store.hasError)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Text('Data game gagal dimuat: ${data.error ?? store.error}',
-                    style: const TextStyle(color: AppColors.negative)),
+                child: Text(
+                  'Data game gagal dimuat: ${data.error ?? store.error}',
+                  style: const TextStyle(color: AppColors.negative),
+                ),
               ),
-            if (_busy) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
             if (saves.isNotEmpty) ...[
               const SizedBox(height: 32),
-              const Text('LANJUTKAN',
-                  style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+              const Text(
+                'LANJUTKAN',
+                style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+              ),
               const SizedBox(height: 8),
               for (final m in saves)
                 Padding(
@@ -111,12 +120,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       isThreeLine: true,
                       onTap: ready && !_busy
-                          ? () => _open(() => GameSession.load(
+                          ? () => _open(
+                              () => GameSession.load(
                                 data: data.value!,
                                 store: store.value!,
                                 bundle: DefaultAssetBundle.of(context),
                                 slotId: m.slotId,
-                              ))
+                              ),
+                            )
                           : null,
                       trailing: IconButton(
                         tooltip: 'Hapus',

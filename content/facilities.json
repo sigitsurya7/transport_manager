@@ -2,43 +2,165 @@
   "_comment": "Fasilitas depot per level. Level 1 = kondisi awal (tanpa biaya). Statistik & visual (modul GLB 'model') berasal dari data yang sama. Uang rupiah, waktu konstruksi dalam menit game (1 menit nyata = 10 menit game).",
   "facilities": [
     {
-      "id": "parking", "name": "Area parkir",
+      "id": "parking",
+      "name": "Area parkir",
       "levels": [
-        {"label": "3 slot", "slots": 3, "model": "parking_1"},
-        {"label": "5 slot", "slots": 5, "cost_idr": 30000000, "build_minutes": 60, "model": "parking_2"},
-        {"label": "8 slot + perluasan lahan", "slots": 8, "cost_idr": 80000000, "build_minutes": 150, "model": "parking_3"}
+        {
+          "label": "3 slot",
+          "slots": 3,
+          "model": "parking_1"
+        },
+        {
+          "label": "5 slot",
+          "slots": 5,
+          "cost_idr": 30000000,
+          "build_minutes": 60,
+          "model": "parking_2"
+        },
+        {
+          "label": "8 slot + perluasan lahan",
+          "slots": 8,
+          "cost_idr": 80000000,
+          "build_minutes": 150,
+          "model": "parking_3"
+        }
       ]
     },
     {
-      "id": "gate", "name": "Gerbang",
+      "id": "gate",
+      "name": "Gerbang",
       "levels": [
-        {"label": "Gerbang manual", "lanes": 1, "pass_s": 150, "model": "gate_1"},
-        {"label": "Gerbang otomatis", "lanes": 1, "pass_s": 45, "cost_idr": 20000000, "build_minutes": 45, "model": "gate_2"},
-        {"label": "Multi-gate (2 jalur)", "lanes": 2, "pass_s": 45, "cost_idr": 60000000, "build_minutes": 90, "model": "gate_3"}
+        {
+          "label": "Gerbang manual",
+          "lanes": 1,
+          "pass_s": 150,
+          "model": "gate_1"
+        },
+        {
+          "label": "Gerbang otomatis",
+          "lanes": 1,
+          "pass_s": 45,
+          "cost_idr": 20000000,
+          "build_minutes": 45,
+          "model": "gate_2"
+        },
+        {
+          "label": "Multi-gate (2 jalur)",
+          "lanes": 2,
+          "pass_s": 45,
+          "cost_idr": 60000000,
+          "build_minutes": 90,
+          "model": "gate_3"
+        }
       ]
     },
     {
-      "id": "loading_dock", "name": "Loading dock",
+      "id": "loading_dock",
+      "name": "Loading dock",
       "levels": [
-        {"label": "1 dock", "docks": 1, "speed": 1.0, "model": "dock_1"},
-        {"label": "2 dock", "docks": 2, "speed": 1.0, "cost_idr": 35000000, "build_minutes": 60, "model": "dock_2"},
-        {"label": "3 dock + leveler", "docks": 3, "speed": 1.3, "cost_idr": 90000000, "build_minutes": 120, "model": "dock_3"}
+        {
+          "label": "1 dock",
+          "docks": 1,
+          "speed": 1.0,
+          "model": "dock_1"
+        },
+        {
+          "label": "2 dock",
+          "docks": 2,
+          "speed": 1.0,
+          "cost_idr": 35000000,
+          "build_minutes": 60,
+          "model": "dock_2"
+        },
+        {
+          "label": "3 dock + leveler",
+          "docks": 3,
+          "speed": 1.3,
+          "cost_idr": 90000000,
+          "build_minutes": 120,
+          "model": "dock_3"
+        }
       ]
     },
     {
-      "id": "warehouse", "name": "Gudang",
+      "id": "workshop",
+      "name": "Bengkel",
       "levels": [
-        {"label": "Gudang kecil", "capacity_m3": 150, "model": "warehouse_1"},
-        {"label": "Gudang sedang", "capacity_m3": 320, "cost_idr": 55000000, "build_minutes": 90, "model": "warehouse_2"},
-        {"label": "Gudang besar + rak tinggi", "capacity_m3": 650, "cost_idr": 140000000, "build_minutes": 180, "model": "warehouse_3"}
+        {
+          "label": "Tanpa bengkel (servis di bengkel luar)",
+          "bays": 0,
+          "speed": 0.6,
+          "cost_factor": 1.4,
+          "model": "workshop_1"
+        },
+        {
+          "label": "Bengkel kecil (1 bay)",
+          "bays": 1,
+          "speed": 1.0,
+          "cost_factor": 1.0,
+          "cost_idr": 40000000,
+          "build_minutes": 90,
+          "model": "workshop_2"
+        },
+        {
+          "label": "Bengkel besar (2 bay)",
+          "bays": 2,
+          "speed": 1.3,
+          "cost_factor": 0.9,
+          "cost_idr": 110000000,
+          "build_minutes": 180,
+          "model": "workshop_3"
+        }
       ]
     },
     {
-      "id": "office", "name": "Kantor",
+      "id": "warehouse",
+      "name": "Gudang",
       "levels": [
-        {"label": "Kantor kecil", "staff_max": 4, "model": "office_1"},
-        {"label": "Kantor dua lantai", "staff_max": 10, "cost_idr": 25000000, "build_minutes": 60, "model": "office_2"},
-        {"label": "Kantor operasional", "staff_max": 20, "cost_idr": 70000000, "build_minutes": 120, "model": "office_3"}
+        {
+          "label": "Gudang kecil",
+          "capacity_m3": 150,
+          "model": "warehouse_1"
+        },
+        {
+          "label": "Gudang sedang",
+          "capacity_m3": 320,
+          "cost_idr": 55000000,
+          "build_minutes": 90,
+          "model": "warehouse_2"
+        },
+        {
+          "label": "Gudang besar + rak tinggi",
+          "capacity_m3": 650,
+          "cost_idr": 140000000,
+          "build_minutes": 180,
+          "model": "warehouse_3"
+        }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Kantor",
+      "levels": [
+        {
+          "label": "Kantor kecil",
+          "staff_max": 4,
+          "model": "office_1"
+        },
+        {
+          "label": "Kantor dua lantai",
+          "staff_max": 10,
+          "cost_idr": 25000000,
+          "build_minutes": 60,
+          "model": "office_2"
+        },
+        {
+          "label": "Kantor operasional",
+          "staff_max": 20,
+          "cost_idr": 70000000,
+          "build_minutes": 120,
+          "model": "office_3"
+        }
       ]
     }
   ]

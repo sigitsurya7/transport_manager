@@ -40,43 +40,59 @@ class TripCard extends StatelessWidget {
     final phases = TripPhase.values.where((p) => p != TripPhase.completed && !p.waiting).toList();
     final index = phases.indexOf(trip.phase);
     // Fase antrean: tampilkan progres fase sebelumnya yang sudah selesai.
-    final done = index >= 0 ? index + snap.phaseProgress : phases.indexOf(TripPhase.values[trip.phase.index + 1]).toDouble();
+    final done = index >= 0
+        ? index + snap.phaseProgress
+        : phases.indexOf(TripPhase.values[trip.phase.index + 1]).toDouble();
     final overall = done / phases.length;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            VehicleIcon(vehicle.model.visual, width: 44),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('${vehicle.model.name} → ${contract.customer}',
-                  style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                VehicleIcon(vehicle.model.visual, width: 44),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${vehicle.model.name} → ${contract.customer}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (onShowMap != null)
+                  IconButton(
+                    tooltip: 'Lihat di peta',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onShowMap,
+                    icon: const GlyphIcon(GameGlyph.map, size: 20),
+                  ),
+              ],
             ),
-            if (onShowMap != null)
-              IconButton(
-                tooltip: 'Lihat di peta',
-                visualDensity: VisualDensity.compact,
-                onPressed: onShowMap,
-                icon: const GlyphIcon(GameGlyph.map, size: 20),
-              ),
-          ]),
-          const SizedBox(height: 4),
-          Text(phaseLabel[trip.phase]!, style: const TextStyle(color: AppColors.textMuted)),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(value: overall, minHeight: 6, backgroundColor: AppColors.outline),
-          ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Text('Tenggat ${formatGameTime(contract.deadline!, fromSimSeconds: world.now)}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-            const Spacer(),
-            Text(trip.phase.waiting ? 'Menunggu antrean' : 'Fase selesai ${formatGameTime(trip.phaseEnd)}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          ]),
-        ]),
+            const SizedBox(height: 4),
+            Text(phaseLabel[trip.phase]!, style: const TextStyle(color: AppColors.textMuted)),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(value: overall, minHeight: 6, backgroundColor: AppColors.outline),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  'Tenggat ${formatGameTime(contract.deadline!, fromSimSeconds: world.now)}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
+                const Spacer(),
+                Text(
+                  trip.phase.waiting ? 'Menunggu antrean' : 'Fase selesai ${formatGameTime(trip.phaseEnd)}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

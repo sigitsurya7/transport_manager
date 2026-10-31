@@ -12,6 +12,8 @@ enum WorldLogKind {
   employeeHired,
   employeeReleased,
   payrollPaid,
+  maintenanceStarted,
+  maintenanceFinished,
 }
 
 /// Satu baris log. Teks untuk pemain disusun UI dari [kind] + [data]

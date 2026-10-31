@@ -64,8 +64,7 @@ String formatKm(num meters) {
   return km < 10 ? '${km.toStringAsFixed(1).replaceAll('.', ',')} km' : '${km.round()} km';
 }
 
-String formatKg(int kg) => kg >= 1000
-    ? '${(kg / 1000).toStringAsFixed(kg % 1000 == 0 ? 0 : 1).replaceAll('.', ',')} t'
-    : '$kg kg';
+String formatKg(int kg) =>
+    kg >= 1000 ? '${(kg / 1000).toStringAsFixed(kg % 1000 == 0 ? 0 : 1).replaceAll('.', ',')} t' : '$kg kg';
 
 String _pad2(int v) => v.toString().padLeft(2, '0');

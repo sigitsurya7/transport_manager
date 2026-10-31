@@ -16,9 +16,9 @@ class TransportManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Transport Manager',
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(),
-        home: const HomeScreen(),
-      );
+    title: 'Transport Manager',
+    debugShowCheckedModeBanner: false,
+    theme: buildTheme(),
+    home: const HomeScreen(),
+  );
 }

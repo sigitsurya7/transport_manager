@@ -73,9 +73,7 @@ ThemeData buildTheme() {
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
-        (s) => IconThemeData(
-          color: s.contains(WidgetState.selected) ? AppColors.accent : AppColors.textMuted,
-        ),
+        (s) => IconThemeData(color: s.contains(WidgetState.selected) ? AppColors.accent : AppColors.textMuted),
       ),
     ),
     dividerTheme: const DividerThemeData(color: AppColors.outline, space: 1),

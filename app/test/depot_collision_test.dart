@@ -81,6 +81,7 @@ void main() {
               'dock_$dockLevel': layout.obstacles('dock_$dockLevel'),
               for (final l in [1, 2, 3]) 'warehouse_$l': layout.obstacles('warehouse_$l'),
               for (final l in [1, 2, 3]) 'office_$l': layout.obstacles('office_$l'),
+              for (final l in [1, 2, 3]) 'workshop_$l': layout.obstacles('workshop_$l'),
             };
             final docks = layout.docks(dockLevel).length;
             final lanes = layout.gateLanes(gateLevel).length;

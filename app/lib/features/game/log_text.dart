@@ -13,18 +13,24 @@ String logText(SimWorld world, WorldLogEntry e) {
     WorldLogKind.dispatched =>
       '${vehicle(d['vehicle'])} ditugaskan ke ${customer(d['contract'])} (${d['mode'] == 'toll' ? 'via tol' : 'non-tol'}).',
     WorldLogKind.departedDepot => '${vehicle(d['vehicle'])} keluar dari gerbang depot.',
-    WorldLogKind.delivered => d['late'] == true
-        ? 'Barang tiba terlambat di ${customer(d['contract'])}. Dibayar ${formatRupiah(d['settled_idr']! as int)}.'
-        : 'Barang tiba tepat waktu di ${customer(d['contract'])}. Dibayar ${formatRupiah(d['settled_idr']! as int)}.',
+    WorldLogKind.delivered =>
+      d['late'] == true
+          ? 'Barang tiba terlambat di ${customer(d['contract'])}. Dibayar ${formatRupiah(d['settled_idr']! as int)}.'
+          : 'Barang tiba tepat waktu di ${customer(d['contract'])}. Dibayar ${formatRupiah(d['settled_idr']! as int)}.',
     WorldLogKind.returnedToDepot => '${vehicle(d['vehicle'])} tiba kembali di depot.',
     WorldLogKind.tripCompleted => '${vehicle(d['vehicle'])} selesai diperiksa dan siap ditugaskan.',
     WorldLogKind.upgradeStarted => 'Konstruksi ${facility(d['facility'])} level ${d['level']} dimulai.',
     WorldLogKind.upgradeFinished => '${facility(d['facility'])} level ${d['level']} selesai dibangun.',
     WorldLogKind.vehiclePurchased => '${vehicle(d['vehicle'])} baru dibeli.',
-    WorldLogKind.employeeHired => d['role'] == 'driver'
-        ? 'Sopir baru ${world.drivers[d['driver']]?.name ?? ''} bergabung.'
-        : 'Staf gudang bertambah menjadi ${d['count']} orang.',
+    WorldLogKind.employeeHired =>
+      d['role'] == 'driver'
+          ? 'Sopir baru ${world.drivers[d['driver']]?.name ?? ''} bergabung.'
+          : 'Staf gudang bertambah menjadi ${d['count']} orang.',
     WorldLogKind.employeeReleased => 'Staf gudang berkurang menjadi ${d['count']} orang.',
+    WorldLogKind.maintenanceStarted =>
+      '${vehicle(d['vehicle'])} masuk bengkel: ${world.content.maintenance.action(d['action']! as String).name.toLowerCase()}.',
+    WorldLogKind.maintenanceFinished =>
+      '${vehicle(d['vehicle'])} selesai ${world.content.maintenance.action(d['action']! as String).name.toLowerCase()}.',
     WorldLogKind.payrollPaid => 'Gaji harian dibayar ${formatRupiah(d['amount_idr']! as int)}.',
   };
 }

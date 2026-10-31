@@ -28,6 +28,7 @@ export 'src/trips/dispatch.dart';
 export 'src/trips/route_track.dart';
 export 'src/trips/travel_time_model.dart';
 export 'src/trips/trip.dart';
+export 'src/vehicle/maintenance.dart';
 export 'src/vehicle/vehicle.dart';
 export 'src/vehicle/vehicle_class.dart';
 export 'src/vehicle/vehicle_profile.dart';

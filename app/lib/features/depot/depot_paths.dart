@@ -46,27 +46,28 @@ class DepotLayout {
 
   List<FloorPoint> docks(int level) => [for (final d in (json['docks'] as Map)['$level'] as List) _pt(d)];
 
-  List<double> gateLanes(int level) =>
-      [for (final x in (json['gate_lanes'] as Map)['$level'] as List) (x as num).toDouble()];
+  List<double> gateLanes(int level) => [
+    for (final x in (json['gate_lanes'] as Map)['$level'] as List) (x as num).toDouble(),
+  ];
 
   List<BoomSpec> booms(int level) => [
-        for (final b in ((json['booms'] as Map)['$level'] as List).cast<Map<String, dynamic>>())
-          BoomSpec(hinge: _pt(b['hinge']), model: b['model'] as String, side: (b['side'] as num).toInt()),
-      ];
+    for (final b in ((json['booms'] as Map)['$level'] as List).cast<Map<String, dynamic>>())
+      BoomSpec(hinge: _pt(b['hinge']), model: b['model'] as String, side: (b['side'] as num).toInt()),
+  ];
 
   FloorPoint anchor(FacilityType type) => _pt((json['anchors'] as Map)[type.id]);
 
   /// Rintangan lantai per modul GLB: (x0, z0, x1, z1).
   List<(double, double, double, double)> obstacles(String model) => [
-        for (final b in ((json['obstacles'] as Map)[model] as List?) ?? const [])
-          ((b[0] as num).toDouble(), (b[1] as num).toDouble(), (b[2] as num).toDouble(), (b[3] as num).toDouble()),
-      ];
+    for (final b in ((json['obstacles'] as Map)[model] as List?) ?? const [])
+      ((b[0] as num).toDouble(), (b[1] as num).toDouble(), (b[2] as num).toDouble(), (b[3] as num).toDouble()),
+  ];
 
   /// Titik palet muatan di lantai bak (koordinat model), depan → belakang.
   List<(double, double, double)> vehicleCargo(String visual) => [
-        for (final c in ((json['vehicle_cargo'] as Map)[visual] as List?) ?? const [])
-          ((c[0] as num).toDouble(), (c[1] as num).toDouble(), (c[2] as num).toDouble()),
-      ];
+    for (final c in ((json['vehicle_cargo'] as Map)[visual] as List?) ?? const [])
+      ((c[0] as num).toDouble(), (c[1] as num).toDouble(), (c[2] as num).toDouble()),
+  ];
 
   /// Kendaraan dengan pintu belakang (punya model `<visual>_open`).
   bool hasDoors(String visual) => ((json['vehicles_with_doors'] as List?) ?? const []).contains(visual);
@@ -187,12 +188,7 @@ class DepotMotion {
   /// [snap]: keadaan kendaraan; [dockLevel]/[gateLevel]: level fasilitas saat
   /// ini; [outQueueAhead]: jumlah kendaraan yang sudah antre keluar (untuk
   /// menentukan tempat berhenti kendaraan yang sedang menuju antrean).
-  FloorPose? pose(
-    VehicleSnapshot snap, {
-    required int dockLevel,
-    required int gateLevel,
-    int outQueueAhead = 0,
-  }) {
+  FloorPose? pose(VehicleSnapshot snap, {required int dockLevel, required int gateLevel, int outQueueAhead = 0}) {
     final s = layout.slots[snap.slotIndex.clamp(0, layout.slots.length - 1)];
     final lane = layout.laneZ;
     final docks = layout.docks(dockLevel);
@@ -217,8 +213,7 @@ class DepotMotion {
           // Bagian akhir lurus agar bak tepat di depan platform tanpa menyenggol.
           rv(dock.x, lane - 3.5),
           rv(dock.x, dock.z),
-        ], startHeading: headingNorth)
-            .poseAt(p);
+        ], startHeading: headingNorth).poseAt(p);
       case TripPhase.loading:
         return (x: dock.x, z: dock.z, heading: headingSouth);
       case TripPhase.toGate:

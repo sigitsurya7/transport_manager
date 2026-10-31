@@ -39,11 +39,11 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     required this.store,
     required SaveMeta initialMeta,
     required this.deviceClock,
-  })  : _meta = initialMeta,
-        clock = SimClock(
-          startSimSeconds: world.now,
-          entitlement: devTools ? const DevSpeedEntitlement() : const FreeSpeedEntitlement(),
-        );
+  }) : _meta = initialMeta,
+       clock = SimClock(
+         startSimSeconds: world.now,
+         entitlement: devTools ? const DevSpeedEntitlement() : const FreeSpeedEntitlement(),
+       );
 
   /// Alat pengujian (pengali kecepatan waktu) hanya di build
   /// `--dart-define=DEV_TOOLS=true`, bukan untuk pemain.
@@ -83,6 +83,7 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
     final extra = _sinceTick.elapsedMicroseconds / 1e6 * timeScale * clock.speedMultiplier;
     return world.now + extra.clamp(0, _tickEvery.inMilliseconds / 1000 * timeScale * 2);
   }
+
   City get city => data.city(_meta.cityId);
   int get timeScale => clock.config.timeScale;
 
@@ -193,8 +194,7 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
       ..start();
     clock.advanceActive(real);
     world.advanceTo(clock.now);
-    if (world.log.length != _savedLogLength ||
-        DateTime.now().difference(_lastSaved) >= _autosaveEvery) {
+    if (world.log.length != _savedLogLength || DateTime.now().difference(_lastSaved) >= _autosaveEvery) {
       unawaited(save());
     }
     notifyListeners();
@@ -236,12 +236,14 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
         }
       case AppLifecycleState.resumed:
         if (_ticker == null) {
-          unawaited(_catchUp().then((_) {
-            if (!_disposed) {
-              _startTicker();
-              notifyListeners();
-            }
-          }));
+          unawaited(
+            _catchUp().then((_) {
+              if (!_disposed) {
+                _startTicker();
+                notifyListeners();
+              }
+            }),
+          );
         }
       case AppLifecycleState.inactive:
         break;
@@ -250,10 +252,9 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
 
   // ------------------------------------------------------------- perintah
 
-  List<Contract> get offers => world.contracts.values
-      .where((c) => c.status == ContractStatus.offered)
-      .toList()
-    ..sort((a, b) => a.id.compareTo(b.id));
+  List<Contract> get offers =>
+      world.contracts.values.where((c) => c.status == ContractStatus.offered).toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
 
   /// Lengkapi tawaran kontrak sampai [offerCount].
   void refreshOffers() {
@@ -291,6 +292,7 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
   void startUpgrade(FacilityType type) => _command(() => world.startUpgrade(depot.id, type));
   void buyVehicle(String modelId) => _command(() => world.buyVehicle(depot.id, modelId));
   void hire(EmployeeRole role) => _command(() => world.hire(depot.id, role));
+  void startMaintenance(int vehicleId, String actionId) => _command(() => world.startMaintenance(vehicleId, actionId));
   void releaseWarehouseStaff() => _command(() => world.releaseWarehouseStaff(depot.id));
 
   void _command(void Function() action) {
@@ -303,8 +305,7 @@ class GameSession extends ChangeNotifier with WidgetsBindingObserver {
       world.check(contractId: contract.id, vehicleId: vehicle.id, driverId: driver.id);
 
   Trip dispatch(Contract contract, Vehicle vehicle, Driver driver, RouteMode mode) {
-    final trip = world.dispatch(
-        contractId: contract.id, vehicleId: vehicle.id, driverId: driver.id, mode: mode);
+    final trip = world.dispatch(contractId: contract.id, vehicleId: vehicle.id, driverId: driver.id, mode: mode);
     unawaited(save());
     notifyListeners();
     return trip;

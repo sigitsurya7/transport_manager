@@ -1,3 +1,4 @@
+import 'maintenance.dart';
 import 'vehicle_class.dart';
 import 'vehicle_profile.dart';
 
@@ -64,7 +65,9 @@ class Vehicle {
     required this.slotIndex,
     this.odometerM = 0,
     this.tripId,
-  });
+    Map<VehicleComponent, double>? condition,
+    this.maintenance,
+  }) : condition = condition ?? {for (final c in VehicleComponent.values) c: 1.0};
 
   final int id;
   final VehicleModel model;
@@ -79,7 +82,16 @@ class Vehicle {
 
   int? tripId;
 
-  bool get isAvailable => tripId == null;
+  /// Kondisi tiap komponen (0 rusak .. 1 baru).
+  final Map<VehicleComponent, double> condition;
+
+  /// Pekerjaan bengkel yang sedang berjalan / antre; kendaraan tidak bisa ditugaskan.
+  MaintenanceJob? maintenance;
+
+  bool get isAvailable => tripId == null && maintenance == null;
+
+  /// Kondisi terburuk (untuk ringkasan & risiko).
+  double get worstCondition => condition.values.reduce((a, b) => a < b ? a : b);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -88,6 +100,8 @@ class Vehicle {
         'slot': slotIndex,
         'odometer_m': odometerM,
         'trip': tripId,
+        'condition': {for (final e in condition.entries) e.key.id: e.value},
+        'maintenance': maintenance?.toJson(),
       };
 
   factory Vehicle.fromJson(Map<String, dynamic> j, Map<String, VehicleModel> models) {
@@ -100,6 +114,12 @@ class Vehicle {
       slotIndex: j['slot'] as int,
       odometerM: j['odometer_m'] as int,
       tripId: j['trip'] as int?,
+      // Save sebelum Tahap 4.1: semua komponen baru.
+      condition: {
+        for (final c in VehicleComponent.values)
+          c: ((j['condition'] as Map?)?[c.id] as num?)?.toDouble() ?? 1.0,
+      },
+      maintenance: j['maintenance'] == null ? null : MaintenanceJob.fromJson(j['maintenance'] as Map<String, dynamic>),
     );
   }
 }

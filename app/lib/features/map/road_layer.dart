@@ -40,8 +40,12 @@ const roadStyles = {
 RoadGroup groupOf(RoadEdge e) {
   // Jalan tol digambar seperti jalan utama: peta netral, sorotan hanya untuk rute aktif.
   return switch (e.roadClass) {
-    RoadClass.motorway || RoadClass.motorwayLink || RoadClass.trunk || RoadClass.trunkLink || RoadClass.primary || RoadClass.primaryLink =>
-      RoadGroup.primary,
+    RoadClass.motorway ||
+    RoadClass.motorwayLink ||
+    RoadClass.trunk ||
+    RoadClass.trunkLink ||
+    RoadClass.primary ||
+    RoadClass.primaryLink => RoadGroup.primary,
     RoadClass.secondary || RoadClass.secondaryLink => RoadGroup.secondary,
     RoadClass.tertiary || RoadClass.tertiaryLink => RoadGroup.tertiary,
     RoadClass.unclassified || RoadClass.residential => RoadGroup.minor,

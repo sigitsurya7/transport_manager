@@ -96,8 +96,7 @@ class GameData {
           mapPackId: region['map_pack'] as String,
           cities: cities,
         ),
-        for (final name in lockedRegions)
-          Region(id: 'locked-$name', name: name, mapPackId: '', cities: const []),
+        for (final name in lockedRegions) Region(id: 'locked-$name', name: name, mapPackId: '', cities: const []),
       ],
     );
     return GameData._(content, [country]);
@@ -116,9 +115,7 @@ class GameData {
     if (cached != null) return cached;
     final text = await bundle.loadString('assets/packs/$cityId.graph.json');
     // Parsing graph berukuran MB di isolate agar UI tidak tersendat.
-    final graph = RoadGraph.fromJson(
-      await compute((String t) => jsonDecode(t) as Map<String, dynamic>, text),
-    );
+    final graph = RoadGraph.fromJson(await compute((String t) => jsonDecode(t) as Map<String, dynamic>, text));
     return _graphs[cityId] = graph;
   }
 

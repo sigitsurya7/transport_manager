@@ -4,7 +4,7 @@ Catatan kemajuan pengembangan Transport Manager. Spesifikasi lengkap: [`MANUAL_I
 
 ## Status saat ini
 
-**Tahap 3 — depot simulation selesai** (antrean, upgrade + visual, pekerja, uji tabrakan). Tahap 2b selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
+**Tahap 4 — business simulation berjalan** (rencana: `docs/TAHAP_4_RENCANA.md`). 4.1 perawatan kendaraan selesai. Tahap 2a selesai: flutter_scene dipilih. Tahap 1 selesai dan disetujui.
 
 ## Log
 
@@ -142,8 +142,18 @@ Bagian yang tidak bergantung engine 3D, dikerjakan lebih dulu:
 - [x] Pengaturan: simpan sekarang, simpan & kembali ke menu utama; mode dev: kecepatan waktu 1×/10×/60× & tambah uang.
 - [x] **Waktu konstruksi dipersingkat**: dari 6–36 jam game menjadi 45–180 menit game (±5–18 menit nyata). Konstruksi yang sedang berjalan di save lama ikut dipercepat saat dimuat (diuji).
 
+### 2026-10-31 — Tahap 4.1: perawatan kendaraan
+
+- [x] Rencana Tahap 4 dipecah 6 bagian (`docs/TAHAP_4_RENCANA.md`).
+- [x] Keausan 7 komponen (mesin, transmisi, rem, ban, suspensi, pendingin, kelistrikan) sebanding jarak, lebih cepat saat bermuatan (`content/maintenance.json`).
+- [x] Kondisi memengaruhi BBM (mesin & ban) dan kecepatan (mesin & transmisi); estimasi dispatch tetap persis (keausan diterapkan setelah trip selesai).
+- [x] Servis rutin, ganti ban, rem, suspensi, overhaul, perbaikan menyeluruh: biaya × kelas kendaraan × bengkel, durasi ÷ kecepatan bengkel. Kendaraan di bengkel tidak bisa ditugaskan.
+- [x] Fasilitas baru **Bengkel**: tanpa bengkel = bengkel luar (×1,4 biaya, lebih lama); bengkel kecil 1 bay; bengkel besar 2 bay (antrean bay). Model 3D bengkel per level + uji tabrakan.
+- [x] UI: ketuk kendaraan di Armada → kondisi komponen, BBM aktual, tombol servis; mekanik tampil di samping kendaraan yang diservis.
+- [x] 74 test sim_core lulus (keausan, efek, bengkel luar, antrean bay, save/load, migrasi).
+
 ## Berikutnya
 
 - [ ] Uji siklus antrean dengan 2–3 kendaraan & upgrade di HP; ukur fps depot level 3.
 - [ ] Map pack 6 kota dari ekstrak Jawa (sudah terunduh) & verifikasi koordinat depot.
-- [ ] **Tahap 4 — business simulation**: barang & warehouse inventory, supplier, karyawan lengkap (skill, kelelahan), maintenance & workshop, asuransi, kecelakaan, laporan keuangan; penyeimbangan ekonomi.
+- [ ] Tahap 4.2 karyawan → 4.3 kecelakaan & asuransi → 4.4 barang & kontrak → 4.5 supplier & gudang → 4.6 keuangan.

@@ -81,70 +81,77 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final size = constraints.biggest;
-      if (!_placed) {
-        _placed = true;
-        _scale = (size.width / 9000).clamp(_minScale, _maxScale); // ±9 km selebar layar
-        _offset = size.center(Offset.zero) - _depotMeters * _scale;
-      }
-      return Stack(children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onScaleStart: (d) {
-              _gestureStartScale = _scale;
-              _gestureStartFocal = d.localFocalPoint;
-              _gestureStartOffset = _offset;
-              setState(() => _followVehicle = null);
-            },
-            onScaleUpdate: (d) => setState(() {
-              final newScale = (_gestureStartScale * d.scale).clamp(_minScale, _maxScale);
-              // Titik di bawah jari tetap di bawah jari saat zoom.
-              final focalMeters = (_gestureStartFocal - _gestureStartOffset) / _gestureStartScale;
-              _scale = newScale;
-              _offset = d.localFocalPoint - focalMeters * newScale;
-            }),
-            child: ClipRect(
-              child: CustomPaint(
-                painter: _RoadPainter(_roads, _scale, _offset),
-                foregroundPainter: _OverlayPainter(session, _roads, _scale, _offset, _frame),
-                child: const SizedBox.expand(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        if (!_placed) {
+          _placed = true;
+          _scale = (size.width / 9000).clamp(_minScale, _maxScale); // ±9 km selebar layar
+          _offset = size.center(Offset.zero) - _depotMeters * _scale;
+        }
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onScaleStart: (d) {
+                  _gestureStartScale = _scale;
+                  _gestureStartFocal = d.localFocalPoint;
+                  _gestureStartOffset = _offset;
+                  setState(() => _followVehicle = null);
+                },
+                onScaleUpdate: (d) => setState(() {
+                  final newScale = (_gestureStartScale * d.scale).clamp(_minScale, _maxScale);
+                  // Titik di bawah jari tetap di bawah jari saat zoom.
+                  final focalMeters = (_gestureStartFocal - _gestureStartOffset) / _gestureStartScale;
+                  _scale = newScale;
+                  _offset = d.localFocalPoint - focalMeters * newScale;
+                }),
+                child: ClipRect(
+                  child: CustomPaint(
+                    painter: _RoadPainter(_roads, _scale, _offset),
+                    foregroundPainter: _OverlayPainter(session, _roads, _scale, _offset, _frame),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Positioned(
-          right: 12,
-          bottom: 12,
-          child: Column(children: [
-            _MapButton(
-              glyph: GameGlyph.depot,
-              tooltip: 'Ke depot',
-              onTap: () {
-                _followVehicle = null;
-                _center(_depotMeters, size);
-              },
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Column(
+                children: [
+                  _MapButton(
+                    glyph: GameGlyph.depot,
+                    tooltip: 'Ke depot',
+                    onTap: () {
+                      _followVehicle = null;
+                      _center(_depotMeters, size);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _MapButton(
+                    glyph: GameGlyph.fleet,
+                    tooltip: 'Ikuti kendaraan',
+                    selected: _followVehicle != null,
+                    onTap: () {
+                      final onRoad = session.world.vehicles.keys.where(
+                        (id) => session.world.vehicleSnapshot(id).pose != null,
+                      );
+                      setState(() => _followVehicle = onRoad.isEmpty ? null : onRoad.first);
+                      if (onRoad.isEmpty) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(content: Text('Tidak ada kendaraan di jalan.')));
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            _MapButton(
-              glyph: GameGlyph.fleet,
-              tooltip: 'Ikuti kendaraan',
-              selected: _followVehicle != null,
-              onTap: () {
-                final onRoad = session.world.vehicles.keys.where(
-                    (id) => session.world.vehicleSnapshot(id).pose != null);
-                setState(() => _followVehicle = onRoad.isEmpty ? null : onRoad.first);
-                if (onRoad.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tidak ada kendaraan di jalan.')));
-                }
-              },
-            ),
-          ]),
-        ),
-        Positioned(left: 12, top: 12, right: 72, child: _StatusPanel(session: session)),
-      ]);
-    });
+            Positioned(left: 12, top: 12, right: 72, child: _StatusPanel(session: session)),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -158,14 +165,14 @@ class _MapButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: selected ? AppColors.accent : AppColors.surfaceHigh,
-        shape: const CircleBorder(side: BorderSide(color: AppColors.outline)),
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onTap,
-          icon: GlyphIcon(glyph, color: selected ? AppColors.onAccent : AppColors.text),
-        ),
-      );
+    color: selected ? AppColors.accent : AppColors.surfaceHigh,
+    shape: const CircleBorder(side: BorderSide(color: AppColors.outline)),
+    child: IconButton(
+      tooltip: tooltip,
+      onPressed: onTap,
+      icon: GlyphIcon(glyph, color: selected ? AppColors.onAccent : AppColors.text),
+    ),
+  );
 }
 
 class _StatusPanel extends StatelessWidget {
@@ -175,28 +182,30 @@ class _StatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: session,
-        builder: (_, _) {
-          final active = session.world.trips.values.where((t) => t.isActive).toList();
-          if (active.isEmpty) return const SizedBox.shrink();
-          final t = active.first;
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.outline),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(children: [
-                VehicleIcon(session.world.vehicles[t.vehicleId]!.model.visual, width: 36),
-                const SizedBox(width: 8),
-                Expanded(child: Text(phaseLabel[t.phase]!, overflow: TextOverflow.ellipsis)),
-              ]),
-            ),
-          );
-        },
+    listenable: session,
+    builder: (_, _) {
+      final active = session.world.trips.values.where((t) => t.isActive).toList();
+      if (active.isEmpty) return const SizedBox.shrink();
+      final t = active.first;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              VehicleIcon(session.world.vehicles[t.vehicleId]!.model.visual, width: 36),
+              const SizedBox(width: 8),
+              Expanded(child: Text(phaseLabel[t.phase]!, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        ),
       );
+    },
+  );
 }
 
 class _RoadPainter extends CustomPainter {

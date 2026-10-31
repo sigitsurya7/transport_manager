@@ -16,6 +16,7 @@ import '../trips/dispatch.dart';
 import '../trips/route_track.dart';
 import '../trips/travel_time_model.dart';
 import '../trips/trip.dart';
+import '../vehicle/maintenance.dart';
 import '../vehicle/vehicle.dart';
 import '../vehicle/vehicle_profile.dart';
 import 'game_content.dart';
@@ -31,6 +32,7 @@ sealed class WorldEvent extends SimEvent {
         TripPhaseEnded.typeName => TripPhaseEnded(j['trip'] as int, TripPhase.values.byName(j['phase'] as String)),
         ConstructionFinished.typeName => ConstructionFinished(j['depot'] as int),
         PayrollDue.typeName => const PayrollDue(),
+        MaintenanceFinished.typeName => MaintenanceFinished(j['vehicle'] as int),
         _ => throw FormatException('Tipe event tidak dikenal: $type'),
       };
 }
@@ -79,6 +81,21 @@ class PayrollDue extends WorldEvent {
   Map<String, dynamic> toJson() => const {};
 }
 
+/// Pekerjaan bengkel pada satu kendaraan selesai.
+class MaintenanceFinished extends WorldEvent {
+  const MaintenanceFinished(this.vehicleId);
+
+  static const typeName = 'maintenance_finished';
+
+  final int vehicleId;
+
+  @override
+  String get type => typeName;
+
+  @override
+  Map<String, dynamic> toJson() => {'vehicle': vehicleId};
+}
+
 enum VehicleActivity {
   /// Diam di slot parkir, siap dipakai.
   parked,
@@ -106,6 +123,7 @@ class VehicleSnapshot {
     this.dock,
     this.gateLane,
     this.queuePosition,
+    this.inWorkshop = false,
   });
 
   final int vehicleId;
@@ -125,6 +143,9 @@ class VehicleSnapshot {
 
   /// Urutan di antrean (0 = terdepan) untuk fase `wait*`.
   final int? queuePosition;
+
+  /// Sedang diservis / antre bengkel (di slot parkirnya).
+  final bool inWorkshop;
 }
 
 enum UpgradeProblem { maxLevel, constructionBusy, insufficientCash }
@@ -132,6 +153,8 @@ enum UpgradeProblem { maxLevel, constructionBusy, insufficientCash }
 enum PurchaseProblem { noFreeSlot, insufficientCash, unknownModel }
 
 enum HireProblem { officeFull }
+
+enum MaintenanceProblem { vehicleBusy, insufficientCash, notNeeded }
 
 class CommandException<T extends Enum> implements Exception {
   const CommandException(this.problems);
@@ -328,12 +351,93 @@ class SimWorld {
     // Kapasitas dock / gerbang bertambah: layani antrean yang menunggu.
     _serveDockQueue(depot);
     _serveGateQueue(depot);
+    _serveWorkshop(depot);
   }
 
   /// Mode pengembang: tambah kas lewat buku besar (akun terpisah, ikut tersimpan).
   void devGrant(int amountIdr) {
     if (amountIdr <= 0) throw ArgumentError.value(amountIdr, 'amountIdr');
     ledger.post(LedgerEntry(time: now, account: LedgerAccount.devAdjustment, amountIdr: amountIdr, ref: 'dev'));
+  }
+
+  // ---------------------------------------------------------------- perawatan
+
+  /// Biaya & durasi tindakan untuk kendaraan ini di bengkel depotnya saat ini.
+  ({int costIdr, int durationS}) maintenanceQuote(int vehicleId, String actionId) {
+    final vehicle = _vehicle(vehicleId);
+    final action = content.maintenance.action(actionId);
+    final shop = facility(_depot(vehicle.depotId), FacilityType.workshop);
+    final classFactor = content.maintenance.classCostFactor[vehicle.model.vehicleClass] ?? 1.0;
+    return (
+      costIdr: (action.costIdr * classFactor * shop.doubleStat('cost_factor')).round(),
+      durationS: (action.minutes * 60 / shop.doubleStat('speed')).round(),
+    );
+  }
+
+  List<MaintenanceProblem> maintenanceProblems(int vehicleId, String actionId) {
+    final vehicle = _vehicle(vehicleId);
+    final action = content.maintenance.action(actionId);
+    return [
+      if (!vehicle.isAvailable) MaintenanceProblem.vehicleBusy,
+      if (cashIdr < maintenanceQuote(vehicleId, actionId).costIdr) MaintenanceProblem.insufficientCash,
+      if (action.restore.keys.every((c) => vehicle.condition[c]! >= 0.999)) MaintenanceProblem.notNeeded,
+    ];
+  }
+
+  /// Bayar & kirim kendaraan ke bengkel. Antre bila semua bay terpakai;
+  /// tanpa bengkel sendiri, dikerjakan bengkel luar (langsung, lebih lama & mahal).
+  MaintenanceJob startMaintenance(int vehicleId, String actionId) {
+    final problems = maintenanceProblems(vehicleId, actionId);
+    if (problems.isNotEmpty) throw CommandException(problems);
+    final vehicle = _vehicle(vehicleId);
+    final q = maintenanceQuote(vehicleId, actionId);
+    ledger.post(LedgerEntry(
+      time: now,
+      account: LedgerAccount.maintenance,
+      amountIdr: -q.costIdr,
+      ref: 'vehicle:${vehicle.id}:$actionId',
+    ));
+    final job = MaintenanceJob(actionId: actionId, requestedAt: now, costIdr: q.costIdr, durationS: q.durationS);
+    vehicle.maintenance = job;
+    _log(WorldLogKind.maintenanceStarted, {'vehicle': vehicle.id, 'action': actionId});
+    _serveWorkshop(_depot(vehicle.depotId));
+    return job;
+  }
+
+  int workshopBays(Depot depot) => facility(depot, FacilityType.workshop).intStat('bays');
+
+  void _serveWorkshop(Depot depot) {
+    final jobs = vehicles.values
+        .where((v) => v.depotId == depot.id && v.maintenance != null)
+        .toList()
+      ..sort((a, b) {
+        final ja = a.maintenance!, jb = b.maintenance!;
+        return ja.requestedAt != jb.requestedAt ? ja.requestedAt.compareTo(jb.requestedAt) : a.id.compareTo(b.id);
+      });
+    final bays = workshopBays(depot);
+    for (final v in jobs) {
+      final job = v.maintenance!;
+      if (!job.waiting) continue;
+      if (bays > 0) {
+        final bay = _free(bays, jobs.map((x) => x.maintenance!.waiting ? null : x.maintenance!.bay));
+        if (bay == null) return;
+        job.bay = bay;
+      }
+      job.startedAt = now;
+      queue.schedule(job.finishAt!, MaintenanceFinished(v.id));
+    }
+  }
+
+  void _onMaintenanceFinished(MaintenanceFinished e) {
+    final vehicle = vehicles[e.vehicleId];
+    final job = vehicle?.maintenance;
+    if (vehicle == null || job == null || job.finishAt != now) return;
+    for (final r in content.maintenance.action(job.actionId).restore.entries) {
+      vehicle.condition[r.key] = math.min(1.0, vehicle.condition[r.key]! + r.value);
+    }
+    vehicle.maintenance = null;
+    _log(WorldLogKind.maintenanceFinished, {'vehicle': vehicle.id, 'action': job.actionId});
+    _serveWorkshop(_depot(vehicle.depotId));
   }
 
   // ---------------------------------------------------------------- armada & karyawan
@@ -510,7 +614,8 @@ class SimWorld {
     final driver = _driver(driverId);
     final problems = <DispatchProblem>[
       if (contract.status != ContractStatus.offered) DispatchProblem.contractNotOffered,
-      if (!vehicle.isAvailable) DispatchProblem.vehicleBusy,
+      if (vehicle.tripId != null) DispatchProblem.vehicleBusy,
+      if (vehicle.maintenance != null) DispatchProblem.vehicleInWorkshop,
       if (!driver.isAvailable) DispatchProblem.driverBusy,
       if (!content.tierRules.canDispatch(contract.scope, vehicle.model.vehicleClass))
         DispatchProblem.vehicleClassTooSmall,
@@ -569,8 +674,8 @@ class SimWorld {
 
   DispatchQuote? _quote(Contract contract, Vehicle vehicle, RouteMode mode) {
     final depot = _depot(vehicle.depotId);
-    final loaded = vehicle.model.profile(cargoKg: contract.weightKg);
-    final empty = vehicle.model.profile();
+    final loaded = vehicleProfile(vehicle, cargoKg: contract.weightKg);
+    final empty = vehicleProfile(vehicle);
     final out = planner.find(depot.roadNode, contract.destinationNode, loaded, mode);
     final back = planner.find(contract.destinationNode, depot.roadNode, empty, mode);
     if (out == null || back == null) return null;
@@ -600,7 +705,23 @@ class SimWorld {
   }
 
   int _fuelIdr(Vehicle vehicle, num distanceM) =>
-      content.economy.fuelCostIdr(distanceM.round().toDouble(), vehicle.model.fuelLPer100Km);
+      content.economy.fuelCostIdr(distanceM.round().toDouble(), fuelLPer100Km(vehicle));
+
+  /// Konsumsi BBM aktual: naik bila mesin & ban aus.
+  double fuelLPer100Km(Vehicle vehicle) {
+    final m = content.maintenance;
+    final c = vehicle.condition;
+    return vehicle.model.fuelLPer100Km *
+        (1 + m.fuelPerEngineWear * (1 - c[VehicleComponent.engine]!) + m.fuelPerTireWear * (1 - c[VehicleComponent.tires]!));
+  }
+
+  /// Profil routing aktual: kecepatan turun bila mesin/transmisi aus.
+  VehicleProfile vehicleProfile(Vehicle vehicle, {int cargoKg = 0}) {
+    final c = vehicle.condition;
+    final drive = math.min(c[VehicleComponent.engine]!, c[VehicleComponent.transmission]!);
+    final min = content.maintenance.minSpeedFactor;
+    return vehicle.model.profile(cargoKg: cargoKg).copyWith(speedFactor: min + (1 - min) * drive);
+  }
 
   // ---------------------------------------------------------------- waktu
 
@@ -615,6 +736,8 @@ class SimWorld {
         _onConstructionFinished(e);
       case PayrollDue():
         _onPayroll();
+      case final MaintenanceFinished e:
+        _onMaintenanceFinished(e);
     }
   }
 
@@ -668,6 +791,10 @@ class SimWorld {
         _enter(trip, TripPhase.inbound);
       case TripPhase.inbound:
         _finishLeg(trip.inbound, vehicle, driver, ref);
+        // Keausan seluruh trip diterapkan setelah pulang agar biaya BBM kedua
+        // leg sama persis dengan estimasi saat dispatch.
+        _wear(vehicle, trip.outbound.distanceM, contract.weightKg);
+        _wear(vehicle, trip.inbound.distanceM, 0);
         _log(WorldLogKind.returnedToDepot, {'trip': trip.id, 'vehicle': vehicle.id});
         _enter(trip, TripPhase.waitGateIn);
         _serveGateQueue(depot);
@@ -763,6 +890,16 @@ class SimWorld {
     _postCost(LedgerAccount.fuel, _fuelIdr(vehicle, leg.distanceM), ref);
   }
 
+  /// Keausan komponen sebanding jarak, lebih cepat saat bermuatan.
+  void _wear(Vehicle vehicle, int distanceM, int cargoKg) {
+    final m = content.maintenance;
+    final load = (cargoKg / vehicle.model.payloadKg).clamp(0.0, 1.0);
+    final factor = distanceM / 1000 * (1 + m.loadedWearFactor * load);
+    for (final c in VehicleComponent.values) {
+      vehicle.condition[c] = math.max(0, vehicle.condition[c]! - m.wearPer1000Km[c]! / 1000 * factor);
+    }
+  }
+
   void _postCost(LedgerAccount account, int amountIdr, String ref) {
     if (amountIdr == 0) return;
     ledger.post(LedgerEntry(time: now, account: account, amountIdr: -amountIdr, ref: ref));
@@ -781,6 +918,7 @@ class SimWorld {
         vehicleId: vehicleId,
         activity: VehicleActivity.parked,
         slotIndex: vehicle.slotIndex,
+        inWorkshop: vehicle.maintenance != null,
       );
     }
     final t = at ?? now;
@@ -830,7 +968,7 @@ class SimWorld {
   RouteTrack _track(Trip trip, Vehicle vehicle, Contract contract, bool outbound) =>
       _tracks.putIfAbsent((trip.id, outbound), () {
         final leg = outbound ? trip.outbound : trip.inbound;
-        final profile = vehicle.model.profile(cargoKg: outbound ? contract.weightKg : 0);
+        final profile = vehicleProfile(vehicle, cargoKg: outbound ? contract.weightKg : 0);
         return RouteTrack.build(
           graph,
           leg.edges,

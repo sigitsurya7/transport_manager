@@ -4,6 +4,7 @@ import '../depot/facilities.dart';
 import '../employees/employee_config.dart';
 import '../finance/economy_config.dart';
 import '../trips/depot_ops_config.dart';
+import '../vehicle/maintenance.dart';
 import '../vehicle/vehicle.dart';
 
 /// Semua katalog data-driven yang dibutuhkan simulasi (folder `content/`).
@@ -18,6 +19,7 @@ class GameContent {
     required this.depotOps,
     required this.facilities,
     required this.employees,
+    required this.maintenance,
   });
 
   /// [files]: isi JSON per nama file di `content/`.
@@ -33,6 +35,7 @@ class GameContent {
       depotOps: DepotOpsConfig.fromJson(f('depot_ops.json')),
       facilities: FacilityCatalog.fromJson(f('facilities.json')),
       employees: EmployeeConfig.fromJson(f('employees.json')),
+      maintenance: MaintenanceConfig.fromJson(f('maintenance.json')),
     );
     if (content.storeCustomers.isEmpty) throw const FormatException('Daftar pelanggan kosong');
     if (content.cargoTypes.isEmpty) throw const FormatException('Katalog barang kosong');
@@ -48,6 +51,7 @@ class GameContent {
     'depot_ops.json',
     'facilities.json',
     'employees.json',
+    'maintenance.json',
   ];
 
   final ContractTierRules tierRules;
@@ -58,4 +62,5 @@ class GameContent {
   final DepotOpsConfig depotOps;
   final FacilityCatalog facilities;
   final EmployeeConfig employees;
+  final MaintenanceConfig maintenance;
 }

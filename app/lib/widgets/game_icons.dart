@@ -252,6 +252,7 @@ enum GameGlyph {
   staff,
   store,
   settings,
+  workshop,
 }
 
 /// Gambar glyph langsung ke kanvas (mis. pin di peta) dalam kotak [rect].
@@ -266,6 +267,7 @@ GameGlyph facilityGlyph(FacilityType t) => switch (t) {
   FacilityType.parking => GameGlyph.parking,
   FacilityType.gate => GameGlyph.gate,
   FacilityType.loadingDock => GameGlyph.dock,
+  FacilityType.workshop => GameGlyph.workshop,
   FacilityType.warehouse => GameGlyph.warehouse,
   FacilityType.office => GameGlyph.office,
 };
@@ -489,6 +491,20 @@ class _GlyphPainter extends CustomPainter {
         canvas.drawLine(const Offset(3.5, 11), const Offset(9.6, 11.6), stroke);
         canvas.drawLine(const Offset(20.5, 11), const Offset(14.4, 11.6), stroke);
         canvas.drawLine(const Offset(12, 14.6), const Offset(12, 20.8), stroke);
+      case GameGlyph.workshop:
+        // kunci pas diagonal
+        canvas.save();
+        canvas.translate(12, 12);
+        canvas.rotate(-math.pi / 4);
+        canvas.drawRRect(RRect.fromLTRBR(-1.6, -4, 1.6, 9.5, const Radius.circular(1.4)), fill);
+        canvas.drawCircle(const Offset(0, -6.2), 4.3, fill);
+        canvas.drawRect(
+          const Rect.fromLTRB(-1.5, -11, 1.5, -6),
+          Paint()
+            ..color = Colors.black.withValues(alpha: 0.6)
+            ..blendMode = BlendMode.srcOver,
+        );
+        canvas.restore();
       case GameGlyph.settings:
         // roda gigi: cincin tebal + 8 gigi persegi
         canvas.drawCircle(
